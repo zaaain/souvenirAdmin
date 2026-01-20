@@ -1,0 +1,18 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "orders": "Orders",
+    "earningPayout": "Earning & Payout",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "header": {
+    "welcome": "Welcome",
+    "role": "Vendor",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout"
+  }
+}
+

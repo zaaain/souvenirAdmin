@@ -1,0 +1,18 @@
+{
+  "sidebar": {
+    "dashboard": "لوحة التحكم",
+    "products": "المنتجات",
+    "orders": "الطلبات",
+    "earningPayout": "الأرباح والدفع",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "header": {
+    "welcome": "مرحباً",
+    "role": "بائع",
+    "profile": "الملف الشخصي",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  }
+}
+
