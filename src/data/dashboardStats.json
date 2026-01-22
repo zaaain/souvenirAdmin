@@ -1,0 +1,42 @@
+[
+  {
+    "id": "1",
+    "heading": "Total Orders",
+    "value": "2,847",
+    "iconType": "cube",
+    "comparisonPercentage": "8.5%",
+    "comparisonText": "vs last month",
+    "comparisonTrend": "positive",
+    "loading": false
+  },
+  {
+    "id": "2",
+    "heading": "Revenue",
+    "value": "$485,290",
+    "iconType": "lineChart",
+    "comparisonPercentage": "1.3%",
+    "comparisonText": "vs last month",
+    "comparisonTrend": "positive",
+    "loading": false
+  },
+  {
+    "id": "3",
+    "heading": "Active Vendors",
+    "value": "156",
+    "iconType": "storefront",
+    "comparisonPercentage": "8.5%",
+    "comparisonText": "new this week",
+    "comparisonTrend": "positive",
+    "loading": false
+  },
+  {
+    "id": "4",
+    "heading": "Total Users",
+    "value": "18,432",
+    "iconType": "users",
+    "comparisonPercentage": "-15.3%",
+    "comparisonText": "vs last month",
+    "comparisonTrend": "negative",
+    "loading": false
+  }
+]

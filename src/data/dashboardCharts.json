@@ -1,0 +1,146 @@
+{
+  "salesTrends": {
+    "title": "Sales Trends",
+    "selectedMonth": "october",
+    "months": [
+      { "value": "january", "label": "January" },
+      { "value": "february", "label": "February" },
+      { "value": "march", "label": "March" },
+      { "value": "april", "label": "April" },
+      { "value": "may", "label": "May" },
+      { "value": "june", "label": "June" },
+      { "value": "july", "label": "July" },
+      { "value": "august", "label": "August" },
+      { "value": "september", "label": "September" },
+      { "value": "october", "label": "October" },
+      { "value": "november", "label": "November" },
+      { "value": "december", "label": "December" }
+    ],
+    "data": [
+      { "day": 1, "value": 320 }, { "day": 2, "value": 380 }, { "day": 3, "value": 410 }, { "day": 4, "value": 350 }, { "day": 5, "value": 480 },
+      { "day": 6, "value": 520 }, { "day": 7, "value": 600 }, { "day": 8, "value": 580 }, { "day": 9, "value": 620 }, { "day": 10, "value": 700 },
+      { "day": 11, "value": 750 }, { "day": 12, "value": 820 }, { "day": 13, "value": 900 }, { "day": 14, "value": 980 }, { "day": 15, "value": 1050 },
+      { "day": 16, "value": 1020 }, { "day": 17, "value": 1100 }, { "day": 18, "value": 1150 }, { "day": 19, "value": 1080 }, { "day": 20, "value": 1200 },
+      { "day": 21, "value": 1180 }, { "day": 22, "value": 1250 }, { "day": 23, "value": 1220 }, { "day": 24, "value": 1300 }, { "day": 25, "value": 1280 },
+      { "day": 26, "value": 1320 }, { "day": 27, "value": 1350 }, { "day": 28, "value": 1300 }, { "day": 29, "value": 1380 }, { "day": 30, "value": 1340 },
+      { "day": 31, "value": 1360 }
+    ],
+    "comparisonText": "8.5% vs last month",
+    "comparisonPositive": true,
+    "loading": false
+  },
+  "recentOrders": {
+    "title": "Recent Orders",
+    "pendingCount": 5,
+    "seeAllHref": "/orders",
+    "itemsPerPage": 10,
+    "data": [
+      { "orderId": "#ORD-2025-001", "orderLink": "/orders/1", "customer": "Dr. Sarah Johnson", "product": "Amoxicilin", "vendor": "PetShop", "amount": "$125,000", "status": "Pending", "date": "Jan 15, 2025" },
+      { "orderId": "#ORD-2025-002", "orderLink": "/orders/2", "customer": "Dr. Sarah Johnson", "product": "Vitamin B Complex", "vendor": "Dr. Sarah Johnson", "amount": "$123,000", "status": "Pending", "date": "Jan 15, 2025" },
+      { "orderId": "#ORD-2025-003", "orderLink": "/orders/3", "customer": "Dr. Sarah Johnson", "product": "Pet Feed 5kg", "vendor": "PetShop", "amount": "$98,500", "status": "Pending", "date": "Jan 14, 2025" },
+      { "orderId": "#ORD-2025-004", "orderLink": "/orders/4", "customer": "Dr. Mike Chen", "product": "Amoxicilin", "vendor": "VetCare", "amount": "$85,200", "status": "Shipped", "date": "Jan 13, 2025" },
+      { "orderId": "#ORD-2025-005", "orderLink": "/orders/5", "customer": "Dr. Mike Chen", "product": "Supplements", "vendor": "PetShop", "amount": "$72,000", "status": "Delivered", "date": "Jan 12, 2025" },
+      { "orderId": "#ORD-2025-006", "orderLink": "/orders/6", "customer": "Dr. Sarah Johnson", "product": "Amoxicilin", "vendor": "PetShop", "amount": "$125,000", "status": "Pending", "date": "Jan 11, 2025" },
+      { "orderId": "#ORD-2025-007", "orderLink": "/orders/7", "customer": "Dr. Mike Chen", "product": "Pet Feed", "vendor": "VetCare", "amount": "$110,000", "status": "Pending", "date": "Jan 10, 2025" },
+      { "orderId": "#ORD-2025-008", "orderLink": "/orders/8", "customer": "Dr. Sarah Johnson", "product": "Vitamin C", "vendor": "PetShop", "amount": "$65,000", "status": "Shipped", "date": "Jan 9, 2025" },
+      { "orderId": "#ORD-2025-009", "orderLink": "/orders/9", "customer": "Dr. Mike Chen", "product": "Amoxicilin", "vendor": "VetCare", "amount": "$125,000", "status": "Pending", "date": "Jan 8, 2025" },
+      { "orderId": "#ORD-2025-010", "orderLink": "/orders/10", "customer": "Dr. Sarah Johnson", "product": "Supplements", "vendor": "PetShop", "amount": "$88,000", "status": "Delivered", "date": "Jan 7, 2025" },
+      { "orderId": "#ORD-2025-011", "orderLink": "/orders/11", "customer": "Dr. Mike Chen", "product": "Amoxicilin", "vendor": "VetCare", "amount": "$95,000", "status": "Pending", "date": "Jan 6, 2025" },
+      { "orderId": "#ORD-2025-012", "orderLink": "/orders/12", "customer": "Dr. Sarah Johnson", "product": "Pet Feed", "vendor": "PetShop", "amount": "$102,000", "status": "Shipped", "date": "Jan 5, 2025" },
+      { "orderId": "#ORD-2025-013", "orderLink": "/orders/13", "customer": "Dr. Mike Chen", "product": "Vitamin B", "vendor": "VetCare", "amount": "$78,000", "status": "Pending", "date": "Jan 4, 2025" },
+      { "orderId": "#ORD-2025-014", "orderLink": "/orders/14", "customer": "Dr. Sarah Johnson", "product": "Amoxicilin", "vendor": "PetShop", "amount": "$125,000", "status": "Delivered", "date": "Jan 3, 2025" },
+      { "orderId": "#ORD-2025-015", "orderLink": "/orders/15", "customer": "Dr. Mike Chen", "product": "Supplements", "vendor": "PetShop", "amount": "$67,000", "status": "Pending", "date": "Jan 2, 2025" }
+    ],
+    "loading": false
+  },
+  "categoryPerformance": {
+    "title": "Category Performance",
+    "subtitle": "This Week",
+    "data": [
+      { "name": "Medications", "value": 25, "color": "#2466D0" },
+      { "name": "Supplements", "value": 25, "color": "#F97316" },
+      { "name": "Vitamins", "value": 25, "color": "#22C55E" },
+      { "name": "Feed", "value": 25, "color": "#EF4444" }
+    ],
+    "loading": false
+  },
+  "pendingVendorApprovals": {
+    "title": "Pending Vendor Approvals",
+    "pendingCount": 5,
+    "seeAllHref": "/vendor-approvals",
+    "items": [
+      {
+        "id": "v1",
+        "imageUrl": "https://picsum.photos/seed/v1/200/200",
+        "vendorName": "VetSupply Co.",
+        "submittedText": "Submitted 2 days ago"
+      },
+      {
+        "id": "v2",
+        "imageUrl": "https://picsum.photos/seed/v2/200/200",
+        "vendorName": "PetCare Plus",
+        "submittedText": "Submitted 1 day ago"
+      },
+      {
+        "id": "v3",
+        "imageUrl": "https://picsum.photos/seed/v3/200/200",
+        "vendorName": "Animal Health Ltd",
+        "submittedText": "Submitted 3 days ago"
+      },
+      {
+        "id": "v4",
+        "imageUrl": "https://picsum.photos/seed/v4/200/200",
+        "vendorName": "FarmVet Solutions",
+        "submittedText": "Submitted 5 days ago"
+      }
+    ],
+    "loading": false
+  },
+  "analyticsCards": {
+    "visitsByDevice": {
+      "title": "Visits by Device",
+      "subtitle": "All Time",
+      "items": [
+        { "icon": "mobile", "label": "Mobile", "percent": "35%" },
+        { "icon": "laptop", "label": "Laptop", "percent": "35%" },
+        { "icon": "tablet", "label": "Tablet", "percent": "35%" },
+        { "icon": "other", "label": "Other", "percent": "35%" }
+      ],
+      "loading": false
+    },
+    "usersVisits": {
+      "title": "Users Visits",
+      "subtitle": "All Time",
+      "value": "2,847",
+      "loading": false
+    },
+    "ageDistribution": {
+      "title": "Age Distribution",
+      "subtitle": "All Time",
+      "data": [
+        { "name": "0-18 years", "value": 35, "color": "#22C55E" },
+        { "name": "18-30 years", "value": 30, "color": "#2466D0" },
+        { "name": "30-40 years", "value": 20, "color": "#EAB308" },
+        { "name": "Other", "value": 15, "color": "#F97316" }
+      ],
+      "loading": false
+    },
+    "conversionRate": {
+      "title": "Conversion Rate",
+      "subtitle": "This Week",
+      "tabs": [
+        { "value": "weekly", "label": "Weekly" },
+        { "value": "month", "label": "Month" },
+        { "value": "year", "label": "Year" }
+      ],
+      "selectedTab": "weekly",
+      "centerLabel": "25%",
+      "data": [
+        { "name": "Purchase", "value": 25, "color": "#22C55E" },
+        { "name": "Cart", "value": 35, "color": "#2466D0" },
+        { "name": "Checkout", "value": 40, "color": "#F97316" }
+      ],
+      "loading": false
+    }
+  }
+}

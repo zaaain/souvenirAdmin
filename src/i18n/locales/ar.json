@@ -2,8 +2,12 @@
   "sidebar": {
     "dashboard": "لوحة التحكم",
     "products": "المنتجات",
+    "vendors": "البائعون",
+    "categories": "الفئات",
+    "users": "المستخدمون",
     "orders": "الطلبات",
     "earningPayout": "الأرباح والدفع",
+    "team": "الفريق",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج"
   },

@@ -2,8 +2,12 @@
   "sidebar": {
     "dashboard": "Dashboard",
     "products": "Products",
+    "vendors": "Vendors",
+    "categories": "Categories",
+    "users": "Users",
     "orders": "Orders",
     "earningPayout": "Earning & Payout",
+    "team": "Team",
     "settings": "Settings",
     "logout": "Logout"
   },

@@ -22,9 +22,11 @@
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^16.5.2",
     "react-loader-spinner": "^8.0.0",
+    "react-loading-skeleton": "^3.5.0",
     "react-otp-input": "^3.1.1",
     "react-redux": "^9.0.4",
     "react-router-dom": "^7.12.0",
+    "recharts": "^3.6.0",
     "redux-persist": "^6.0.0",
     "rtl-css-js": "^1.16.1",
     "yup": "^1.7.1"
