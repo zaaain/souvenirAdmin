@@ -7,6 +7,7 @@ export interface ModalAction {
   label: string
   onClick: () => void
   variant?: 'primary' | 'secondary' | 'danger'
+  disabled?: boolean
 }
 
 export interface ModalProps {
@@ -101,7 +102,8 @@ function Modal({ isOpen, onClose, title, description, iconType, actions = [] }: 
                 key={i}
                 type="button"
                 onClick={a.onClick}
-                className={btnClass[a.variant ?? 'primary']}
+                disabled={a.disabled}
+                className={`${btnClass[a.variant ?? 'primary']} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {a.label}
               </button>

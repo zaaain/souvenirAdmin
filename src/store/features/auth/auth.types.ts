@@ -4,18 +4,17 @@ export interface User {
   name: string
 }
 
+/** Admin profile from get profile API - stored & persisted in auth */
 export interface ProfileData {
   _id: string
-  phone: string
+  createdAt: string
+  email: string
   firstname: string
   lastname: string
   isActive: boolean
-  status: string
-  createdAt: string
+  role: string
   updatedAt: string
-  _v: number
-  isPhoneVerified: boolean
-  passwordResetToken: string | null
+  __v?: number
 }
 
 export interface AuthState {

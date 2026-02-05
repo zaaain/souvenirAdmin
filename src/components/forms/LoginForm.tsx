@@ -27,7 +27,7 @@ const LoginForm = () => {
     resolver: yupResolver(loginSchema),
     mode: 'onChange',
     defaultValues: {
-      phone: '',
+      email: '',
       password: '',
       rememberMe: false,
     },
@@ -36,7 +36,7 @@ const LoginForm = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const loginData = {
-        phone: data.phone.trim(),
+        email: data.email.trim(),
         password: data.password,
       }
       const result = await loginUser(loginData).unwrap()
@@ -83,9 +83,9 @@ const LoginForm = () => {
     // Get values from controlled inputs
     const formData = getValues()
     
-    // Trim whitespace from phone
+    // Trim whitespace from email
     const loginData = {
-      phone: formData.phone?.trim() || '',
+      email: formData.email?.trim() || '',
       password: formData.password || '',
     }
 
@@ -108,22 +108,19 @@ const LoginForm = () => {
       }
       
       // Call get profile API after successful login
-      // try {
-      //   const profileResult = await getProfile().unwrap()
-      //   console.log('Profile fetched:', profileResult)
-      //   
-      //   // Update profile data if API returns different structure
-      //   if (profileResult?.data) {
-      //     dispatch(setProfileData({
-      //       profileData: profileResult.data,
-      //       token: token
-      //     }))
-      //   }
-      // } catch (profileError) {
-      //   console.error('Error fetching profile:', profileError)
-      //   // Don't block navigation if profile fetch fails
-      // }
-      
+      try {
+        const profileResult = await getProfile(undefined).unwrap()
+        console.log('Profile fetched:', profileResult)
+        if (profileResult?.data) {
+          dispatch(setProfileData({
+            profileData: profileResult.data,
+            token: token,
+          }))
+        }
+      } catch (profileError) {
+        console.error('Error fetching profile:', profileError)
+      }
+
       // Show success message only if API returns a message
       if (result?.message || result?.data?.message) {
         sSnack(result?.message || result?.data?.message)
@@ -150,22 +147,22 @@ const LoginForm = () => {
         Login to Account
       </h1>
       <p className="text-gray-600 text-center mb-6 font-Manrope">
-        Please enter your phone number and password to continue
+        Please enter your email and password to continue
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Controller
-          name="phone"
+          name="email"
           control={control}
           render={({ field }) => (
             <Input
-              label="Phone"
-              type="tel"
-              placeholder="Phone Number"
+              label="Email"
+              type="email"
+              placeholder="Email"
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
-              error={errors.phone?.message}
+              error={errors.email?.message}
             />
           )}
         />

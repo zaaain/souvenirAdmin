@@ -4,6 +4,8 @@ import { Filter } from '@components/filter'
 import { Modal } from '@components/modal'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
+import { useGetVendorsQuery, useDeleteVendorMutation } from '@store/features/vendor'
+import { eSnack, sSnack } from '@hooks/useToast'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -30,22 +32,8 @@ function StoreIcon() {
   )
 }
 
-const MOCK_VENDORS: Record<string, unknown>[] = [
-  { vendorId: '2025-001', fullName: 'Petclinics', email: 'contact@petclinics.com', phone: '+1 415 555 0101', revenue: '-', dateJoined: '-', dateJoinedRaw: '', status: 'Pending' },
-  { vendorId: '2025-002', fullName: 'PetShop', email: 'info@petshop.com', phone: '+1 415 555 0102', revenue: '$123,000', dateJoined: 'Jan 15, 2025', dateJoinedRaw: '2025-01-15', status: 'Active' },
-  { vendorId: '2025-003', fullName: 'Vet Care', email: 'hello@vetcare.com', phone: '+1 415 555 0103', revenue: '-', dateJoined: '-', dateJoinedRaw: '', status: 'Rejected' },
-  { vendorId: '2025-004', fullName: 'Care.it', email: 'support@care.it', phone: '+1 415 555 0104', revenue: '$98,500', dateJoined: 'Jan 14, 2025', dateJoinedRaw: '2025-01-14', status: 'Inactive' },
-  { vendorId: '2025-005', fullName: 'Petclinics', email: 'contact@petclinics.com', phone: '+1 415 555 0105', revenue: '-', dateJoined: 'Jan 13, 2025', dateJoinedRaw: '2025-01-13', status: 'Pending' },
-  { vendorId: '2025-006', fullName: 'Animal Health', email: 'info@animalhealth.com', phone: '+1 415 555 0106', revenue: '$156,000', dateJoined: 'Jan 12, 2025', dateJoinedRaw: '2025-01-12', status: 'Active' },
-  { vendorId: '2025-007', fullName: 'VetCare Plus', email: 'hello@vetcareplus.com', phone: '+1 415 555 0107', revenue: '-', dateJoined: '-', dateJoinedRaw: '', status: 'Pending' },
-  { vendorId: '2025-008', fullName: 'PetFeed Co', email: 'support@petfeed.co', phone: '+1 415 555 0108', revenue: '$87,200', dateJoined: 'Jan 10, 2025', dateJoinedRaw: '2025-01-10', status: 'Active' },
-  { vendorId: '2025-009', fullName: 'FarmVet', email: 'contact@farmvet.com', phone: '+1 415 555 0109', revenue: '-', dateJoined: 'Jan 9, 2025', dateJoinedRaw: '2025-01-09', status: 'Rejected' },
-  { vendorId: '2025-010', fullName: 'PetStore Online', email: 'info@petstore.com', phone: '+1 415 555 0110', revenue: '$203,000', dateJoined: 'Jan 8, 2025', dateJoinedRaw: '2025-01-08', status: 'Active' },
-  { vendorId: '2025-011', fullName: 'Vet Solutions', email: 'hello@vetsolutions.com', phone: '+1 415 555 0111', revenue: '-', dateJoined: '-', dateJoinedRaw: '', status: 'Inactive' },
-  { vendorId: '2025-012', fullName: 'Care Plus', email: 'support@careplus.com', phone: '+1 415 555 0112', revenue: '$112,000', dateJoined: 'Jan 5, 2025', dateJoinedRaw: '2025-01-05', status: 'Active' },
-]
-
-const ITEMS_PER_PAGE = 10
+const DEFAULT_PAGE = 1
+const DEFAULT_PAGE_SIZE = 10
 
 function buildColumns(
   onView: (id: string) => void,
@@ -73,7 +61,7 @@ function buildColumns(
       key: 'status',
       label: 'Status',
       render: (v) => (
-        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope ${STATUS_PILL[String(v ?? '')] ?? 'bg-gray-100 text-gray-600'}`}>
+        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope capitalize ${STATUS_PILL[String(v ?? '')] ?? 'bg-gray-100 text-gray-600'}`}>
           {String(v ?? '')}
         </span>
       ),
@@ -126,17 +114,70 @@ function buildColumns(
   ]
 }
 
+/** Map API vendor item to table row shape (without rowNum) */
+function mapVendorToRow(raw: Record<string, unknown>): Record<string, unknown> {
+  const id = String(raw._id ?? raw.id ?? raw.vendorId ?? '')
+  const fullName =
+    String(raw.fullName ?? raw.businessName ?? '').trim() ||
+    [raw.firstname, raw.lastname].filter(Boolean).join(' ').trim() ||
+    '-'
+  const email = String(raw.email ?? '')
+  const phone = String(raw.phone ?? raw.phoneNumber ?? '')
+  const revenue = raw.revenue != null ? String(raw.revenue) : '-'
+  const dateJoined = raw.dateJoined ?? raw.createdAt ?? '-'
+  const dateJoinedRaw = typeof dateJoined === 'string' ? dateJoined.slice(0, 10) : ''
+  const status = String(
+    raw.status ??
+    (raw.isActive === true ? 'Active' : raw.isActive === false ? 'Inactive' : 'Pending')
+  )
+  return {
+    vendorId: id,
+    fullName,
+    email,
+    phone,
+    revenue,
+    dateJoined: dateJoinedRaw || '-',
+    dateJoinedRaw,
+    status,
+  }
+}
+
 const Vendors = () => {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [dateJoined, setDateJoined] = useState('')
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(DEFAULT_PAGE)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteVendorId, setDeleteVendorId] = useState<string | null>(null)
 
+  const { data: apiResponse, isLoading } = useGetVendorsQuery({ page, pageSize })
+  const [deleteVendor, { isLoading: isDeleteLoading }] = useDeleteVendorMutation()
+
+  const rawList = useMemo(() => {
+    const d = apiResponse?.data
+    if (!d) return []
+    if (Array.isArray(d)) return d as Record<string, unknown>[]
+    const obj = d as Record<string, unknown>
+    if (Array.isArray(obj.users)) return obj.users as Record<string, unknown>[]
+    if (Array.isArray(obj.vendors)) return obj.vendors as Record<string, unknown>[]
+    if (Array.isArray(obj.list)) return obj.list as Record<string, unknown>[]
+    if (Array.isArray(obj.data)) return obj.data as Record<string, unknown>[]
+    return []
+  }, [apiResponse])
+
+  const totalFromApi = useMemo(() => {
+    const d = apiResponse?.data as Record<string, unknown> | undefined
+    if (!d || Array.isArray(d)) return rawList.length
+    const t = (d.totalUsers as number) ?? (d.total as number) ?? (d.totalCount as number) ?? rawList.length
+    return Number(t) || rawList.length
+  }, [apiResponse, rawList.length])
+
+  const mappedList = useMemo(() => rawList.map(mapVendorToRow), [rawList])
+
   const filtered = useMemo(() => {
-    let list = [...MOCK_VENDORS]
+    let list = mappedList
     if (status !== 'all') list = list.filter((r) => r.status === status)
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -151,14 +192,16 @@ const Vendors = () => {
       list = list.filter((r) => String(r.dateJoinedRaw ?? '') === dateJoined)
     }
     return list
-  }, [search, status, dateJoined])
+  }, [mappedList, search, status, dateJoined])
 
-  const total = filtered.length
-  const start = (page - 1) * ITEMS_PER_PAGE
-  const sliced = filtered.slice(start, start + ITEMS_PER_PAGE).map((r, i) => ({
-    ...r,
-    rowNum: start + i + 1,
-  }))
+  const total = status !== 'all' || search.trim() || dateJoined ? filtered.length : totalFromApi
+  const tableData = useMemo(() => {
+    if (status !== 'all' || search.trim() || dateJoined) {
+      const start = (page - 1) * pageSize
+      return filtered.slice(start, start + pageSize).map((r, i) => ({ ...r, rowNum: start + i + 1 }))
+    }
+    return mappedList.map((r, i) => ({ ...r, rowNum: (page - 1) * pageSize + i + 1 }))
+  }, [mappedList, filtered, page, pageSize, status, search, dateJoined])
 
   const columns = useMemo(
     () =>
@@ -181,6 +224,22 @@ const Vendors = () => {
     setPage(1)
   }
   const handleExport = () => console.log('Export')
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
+  const handleDeleteVendor = async () => {
+    if (!deleteVendorId) return
+    try {
+      const result = await deleteVendor(deleteVendorId).unwrap()
+      sSnack(result?.message ?? 'Vendor deleted successfully')
+      setDeleteModalOpen(false)
+      setDeleteVendorId(null)
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to delete vendor'
+      eSnack(msg)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -216,11 +275,13 @@ const Vendors = () => {
 
       <PaginateTable
         headers={columns}
-        data={sliced}
+        data={tableData}
         currentPage={page}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={pageSize}
         totalResults={total}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+        loading={isLoading}
       />
 
       <Modal
@@ -231,7 +292,7 @@ const Vendors = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => { setDeleteModalOpen(false); setDeleteVendorId(null) }, variant: 'secondary' },
-          { label: 'Delete Vendor', onClick: () => { console.log('Delete', deleteVendorId); setDeleteModalOpen(false); setDeleteVendorId(null) }, variant: 'danger' },
+          { label: 'Delete Vendor', onClick: handleDeleteVendor, variant: 'danger', disabled: isDeleteLoading },
         ]}
       />
     </div>

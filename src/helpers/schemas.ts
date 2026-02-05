@@ -1,11 +1,11 @@
 import * as yup from 'yup'
 
 export const loginSchema = yup.object().shape({
-  phone: yup
+  email: yup
     .string()
     .trim()
-    .required('Phone number is required')
-    .matches(/^[0-9]{10}$/, 'Phone number must be 10 digits'),
+    .email('Invalid email address')
+    .required('Email is required'),
   password: yup
     .string()
     .min(6, 'Password must be at least 6 characters')

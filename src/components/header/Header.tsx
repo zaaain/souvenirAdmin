@@ -154,7 +154,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                   <p className="text-sm font-ManropeBold text-gray-800">
                     {profileData?.firstname || 'User'} {profileData?.lastname || ''}
                   </p>
-                  <p className="text-xs font-Manrope text-gray-500">{profileData?.phone || ''}</p>
+                  <p className="text-xs font-Manrope text-gray-500">{profileData?.email || ''}</p>
                 </div>
                 <button 
                   onClick={handleProfileClick}

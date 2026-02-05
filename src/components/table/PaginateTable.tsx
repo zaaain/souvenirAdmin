@@ -1,6 +1,8 @@
 import SimpleTable from './SimpleTable'
 import type { TableColumn } from './SimpleTable'
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50]
+
 export interface PaginateTableProps {
   headers: TableColumn[]
   data: Record<string, unknown>[]
@@ -11,6 +13,10 @@ export interface PaginateTableProps {
   /** Total number of results across all pages */
   totalResults: number
   onPageChange: (page: number) => void
+  /** Called when user changes page size; optional */
+  onPageSizeChange?: (size: number) => void
+  /** When true, table body shows skeleton rows */
+  loading?: boolean
 }
 
 function PaginateTable({
@@ -20,6 +26,8 @@ function PaginateTable({
   itemsPerPage,
   totalResults,
   onPageChange,
+  onPageSizeChange,
+  loading = false,
 }: PaginateTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage))
   const start = totalResults === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1
@@ -41,16 +49,33 @@ function PaginateTable({
 
   return (
     <div>
-      <SimpleTable headers={headers} data={data} />
+      <SimpleTable headers={headers} data={data} loading={loading} />
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-gray-100">
-        <p className="text-sm font-Manrope text-gray-600 order-2 sm:order-1">
-          Showing{' '}
-          <span className="font-ManropeBold text-primary">{start}-{end}</span>
-          {' '}of{' '}
-          <span className="font-ManropeBold text-primary">{totalResults}</span>
-          {' '}results
-        </p>
+        <div className="flex flex-wrap items-center gap-3 order-2 sm:order-1">
+          <p className="text-sm font-Manrope text-gray-600">
+            Showing{' '}
+            <span className="font-ManropeBold text-primary">{start}-{end}</span>
+            {' '}of{' '}
+            <span className="font-ManropeBold text-primary">{totalResults}</span>
+            {' '}results
+          </p>
+          {onPageSizeChange && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-Manrope text-gray-600">Per page</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                className="text-sm font-Manrope border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                aria-label="Items per page"
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-1 order-1 sm:order-2">
           <button
             type="button"

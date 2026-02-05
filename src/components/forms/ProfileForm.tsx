@@ -27,8 +27,8 @@ const ProfileForm = () => {
       fullName: profileData?.firstname && profileData?.lastname 
         ? `${profileData.firstname} ${profileData.lastname}` 
         : '',
-      email: '',
-      phone: profileData?.phone || '',
+      email: profileData?.email || '',
+      phone: '',
       address: '',
     },
   })

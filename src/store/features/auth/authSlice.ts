@@ -33,8 +33,8 @@ export const authSlice = createApi({
       }),
     }),
     login: builder.mutation({
-      query: (body: { phone: string; password: string }) => ({
-        url: 'auth/user/login',
+      query: (body: { email: string; password: string }) => ({
+        url: '/admin/login',
         method: 'POST',
         body,
       }),

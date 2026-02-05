@@ -1,10 +1,15 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useState, useMemo } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { TailSpin } from 'react-loader-spinner'
 import { VendorInfoCard } from '@components/card'
 import type { VendorInfoCardItem } from '@components/card'
 import { Modal } from '@components/modal'
 import { SimpleTable } from '@components/table'
 import type { TableColumn } from '@components/table'
+import { useGetVendorByIdQuery, useUpdateVendorApprovalMutation, useUpdateVendorStatusMutation, useDeleteVendorMutation } from '@store/features/vendor'
+import { eSnack, sSnack } from '@hooks/useToast'
+
+const NA = 'N/A'
 
 const STATUS_PILL: Record<string, string> = {
   Pending: 'bg-amber-100 text-amber-700',
@@ -12,21 +17,6 @@ const STATUS_PILL: Record<string, string> = {
   Rejected: 'bg-red-100 text-red-700',
   Inactive: 'bg-gray-100 text-gray-600',
 }
-
-const MOCK_VENDORS: Record<string, unknown>[] = [
-  { vendorId: '2025-001', fullName: 'Petclinics', email: 'contact@petclinics.com', status: 'Pending' },
-  { vendorId: '2025-002', fullName: 'PetShop', email: 'info@petshop.com', status: 'Pending' },
-  { vendorId: '2025-003', fullName: 'Vet Care', status: 'Rejected' },
-  { vendorId: '2025-004', fullName: 'Care.it', status: 'Inactive' },
-  { vendorId: '2025-005', fullName: 'Petclinics', status: 'Pending' },
-  { vendorId: '2025-006', fullName: 'Animal Health', status: 'Active' },
-  { vendorId: '2025-007', fullName: 'VetCare Plus', status: 'Pending' },
-  { vendorId: '2025-008', fullName: 'PetFeed Co', status: 'Active' },
-  { vendorId: '2025-009', fullName: 'FarmVet', status: 'Rejected' },
-  { vendorId: '2025-010', fullName: 'PetStore Online', status: 'Active' },
-  { vendorId: '2025-011', fullName: 'Vet Solutions', status: 'Inactive' },
-  { vendorId: '2025-012', fullName: 'Care Plus', status: 'Active' },
-]
 
 interface VendorDetailData {
   fullName: string
@@ -41,81 +31,53 @@ interface VendorDetailData {
   documents: { documentName: string; documentNumber: string; link: string; expiryDate: string }[]
 }
 
-/** Dummy documents for Documents & Verification SimpleTable — use when vendor has no docs */
-const DOCUMENTS_DUMMY_DATA: { documentName: string; documentNumber: string; link: string; expiryDate: string }[] = [
-  { documentName: 'Business License', documentNumber: '1232141232121', link: 'https://veritas.com/verify/doc/98765432109876543210', expiryDate: 'Jan 15, 2025' },
-  { documentName: 'Tax Registration Certificate', documentNumber: '1232141232121', link: 'https://acme.com/verify/doc/56789012345678901234', expiryDate: 'Jan 15, 2025' },
-  { documentName: 'Bank Account Verification', documentNumber: '1232141232121', link: 'https://veritas.com/verify/doc/11223344556677889900', expiryDate: 'Jan 15, 2025' },
-]
-
-const MOCK_DETAIL: Record<string, VendorDetailData> = {
-  '2025-002': {
-    fullName: 'PetShop',
-    status: 'Active',
-    website: 'www.techgearsolutions.com',
-    totalProducts: 14,
-    totalOrders: 2847,
-    revenue: '$123,000',
-    business: [
-      { label: 'Vendor ID', value: 'LD-2025-001' },
-      { label: 'Legal Entity Type', value: 'Corporation (C-Corp)' },
-      { label: 'Tax ID / EIN', value: '12-123123456' },
-      { label: 'Business Registration Number', value: 'BRN-2847392847' },
-      { label: 'Business Address', value: '1234 Market Street, Suite 500, San Francisco, CA 94103', colSpan: 3 },
-    ],
-    primaryContact: [
-      { label: 'Primary Contact', value: 'Michael Chen' },
-      { label: 'Contact Email', value: 'michael.chen@techgear.com' },
-      { label: 'Phone Number', value: '+1 (415) 555-0198' },
-    ],
-    bankPayout: [
-      { label: 'Bank Name', value: 'Wells Fargo Bank' },
-      { label: 'Account Holder Name', value: 'PetShop' },
-      { label: 'Account Number', value: '********1234' },
-      { label: 'Routing Number', value: '121000248' },
-      { label: 'Account Type', value: 'Business Checking' },
-      { label: 'Currency', value: 'USD' },
-    ],
-    documents: [
-      { documentName: 'Business License', documentNumber: '1232141232121', link: 'https://veritas.com/verify/doc/98765432109876543210', expiryDate: 'Jan 15, 2025' },
-      { documentName: 'Tax Registration Certificate', documentNumber: '1232141232121', link: 'https://acme.com/verify/doc/56789012345678901234', expiryDate: 'Jan 15, 2025' },
-      { documentName: 'Bank Account Verification', documentNumber: '1232141232121', link: 'https://veritas.com/verify/doc/11223344556677889900', expiryDate: 'Jan 15, 2025' },
-    ],
-  },
-}
-
-function getVendorDetail(id: string): VendorDetailData | null {
-  if (MOCK_DETAIL[id]) return MOCK_DETAIL[id]
-  const fromList = MOCK_VENDORS.find((v) => String(v.vendorId) === id) as Record<string, unknown> | undefined
-  if (!fromList) return null
+/** Map API vendor object to VendorDetailData; missing keys show N/A */
+function mapApiVendorToDetail(raw: Record<string, unknown>): VendorDetailData {
+  const id = String(raw._id ?? raw.id ?? '')
+  const fullName =
+    String(raw.fullName ?? raw.businessName ?? '').trim() ||
+    [raw.firstname, raw.lastname].filter(Boolean).join(' ').trim() ||
+    NA
+  const statusRaw = raw.status ?? (raw.isActive === true ? 'Active' : raw.isActive === false ? 'Inactive' : 'Pending')
+  const s = String(statusRaw)
+  const status = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+  const email = raw.email != null && raw.email !== '' ? String(raw.email) : NA
+  const phone = raw.phone != null && raw.phone !== '' ? String(raw.phone) : NA
   return {
-    fullName: String(fromList.fullName ?? '—'),
-    status: String(fromList.status ?? '—'),
-    website: '—',
-    totalProducts: 0,
-    totalOrders: 0,
-    revenue: '—',
+    fullName,
+    status,
+    website: raw.website != null && raw.website !== '' ? String(raw.website) : NA,
+    totalProducts: Number(raw.productCount ?? raw.totalProducts ?? raw.productsCount ?? 0) || 0,
+    totalOrders: Number(raw.orderCount ?? raw.totalOrders ?? raw.ordersCount ?? 0) || 0,
+    revenue: raw.revenue != null && raw.revenue !== '' ? String(raw.revenue) : NA,
     business: [
-      { label: 'Vendor ID', value: String(fromList.vendorId ?? '—') },
-      { label: 'Legal Entity Type', value: '—' },
-      { label: 'Tax ID / EIN', value: '—' },
-      { label: 'Business Registration Number', value: '—' },
-      { label: 'Business Address', value: '—', colSpan: 3 },
+      { label: 'Vendor ID', value: id || NA },
+      { label: 'Legal Entity Type', value: raw.legalEntityType != null && raw.legalEntityType !== '' ? String(raw.legalEntityType) : NA },
+      { label: 'Tax ID / EIN', value: raw.taxId != null && raw.taxId !== '' ? String(raw.taxId) : NA },
+      { label: 'Business Registration Number', value: raw.businessRegistrationNumber != null && raw.businessRegistrationNumber !== '' ? String(raw.businessRegistrationNumber) : NA },
+      { label: 'Business Address', value: raw.businessAddress != null && raw.businessAddress !== '' ? String(raw.businessAddress) : NA, colSpan: 3 },
     ],
     primaryContact: [
-      { label: 'Primary Contact', value: '—' },
-      { label: 'Contact Email', value: String(fromList.email ?? '—') },
-      { label: 'Phone Number', value: '—' },
+      { label: 'Primary Contact', value: fullName !== NA ? fullName : NA },
+      { label: 'Contact Email', value: email },
+      { label: 'Phone Number', value: phone },
     ],
     bankPayout: [
-      { label: 'Bank Name', value: '—' },
-      { label: 'Account Holder Name', value: '—' },
-      { label: 'Account Number', value: '—' },
-      { label: 'Routing Number', value: '—' },
-      { label: 'Account Type', value: '—' },
-      { label: 'Currency', value: '—' },
+      { label: 'Bank Name', value: raw.bankName != null && raw.bankName !== '' ? String(raw.bankName) : NA },
+      { label: 'Account Holder Name', value: raw.accountHolderName != null && raw.accountHolderName !== '' ? String(raw.accountHolderName) : NA },
+      { label: 'Account Number', value: raw.accountNumber != null && raw.accountNumber !== '' ? String(raw.accountNumber) : NA },
+      { label: 'Routing Number', value: raw.routingNumber != null && raw.routingNumber !== '' ? String(raw.routingNumber) : NA },
+      { label: 'Account Type', value: raw.accountType != null && raw.accountType !== '' ? String(raw.accountType) : NA },
+      { label: 'Currency', value: raw.currency != null && raw.currency !== '' ? String(raw.currency) : NA },
     ],
-    documents: [],
+    documents: Array.isArray(raw.documents)
+      ? (raw.documents as { documentName?: string; documentNumber?: string; link?: string; expiryDate?: string }[]).map((d) => ({
+          documentName: d.documentName != null && d.documentName !== '' ? String(d.documentName) : NA,
+          documentNumber: d.documentNumber != null && d.documentNumber !== '' ? String(d.documentNumber) : NA,
+          link: d.link != null && d.link !== '' ? String(d.link) : NA,
+          expiryDate: d.expiryDate != null && d.expiryDate !== '' ? String(d.expiryDate) : NA,
+        }))
+      : [],
   }
 }
 
@@ -143,14 +105,50 @@ function StatCard({
 
 const VendorDetail = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [approveModalOpen, setApproveModalOpen] = useState(false)
   const [inactivateModalOpen, setInactivateModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const detail = id ? getVendorDetail(id) : null
+
+  const { data: apiResponse, isLoading, isError, refetch } = useGetVendorByIdQuery(id ?? '', { skip: !id })
+  const [updateApproval, { isLoading: isApprovalLoading }] = useUpdateVendorApprovalMutation()
+  const [updateStatus, { isLoading: isStatusLoading }] = useUpdateVendorStatusMutation()
+  const [deleteVendor, { isLoading: isDeleteLoading }] = useDeleteVendorMutation()
+
+  const detail = useMemo(() => {
+    if (!apiResponse?.data) return null
+    const d = apiResponse.data as Record<string, unknown>
+    const vendor = (d.data as Record<string, unknown>) ?? d
+    if (!vendor || typeof vendor !== 'object') return null
+    return mapApiVendorToDetail(vendor as Record<string, unknown>)
+  }, [apiResponse])
+
   const isActive = detail?.status === 'Active'
 
-  if (!id || !detail) {
+  if (!id) {
+    return (
+      <div className="space-y-4">
+        <Link to="/vendors" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Vendors
+        </Link>
+        <p className="text-gray-600">Vendor not found.</p>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <TailSpin visible height={60} width={60} color="#2466D0" ariaLabel="Loading vendor" />
+      </div>
+    )
+  }
+
+  if (isError || !detail) {
     return (
       <div className="space-y-4">
         <Link to="/vendors" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
@@ -197,10 +195,54 @@ const VendorDetail = () => {
       ),
     },
   ]
-  const docRows = detail.documents.length > 0 ? detail.documents : DOCUMENTS_DUMMY_DATA
-  const docData = docRows.map((d, i) => ({ ...d, rowNum: i + 1 }))
+  const docData = detail.documents.map((d, i) => ({ ...d, rowNum: i + 1 }))
 
-  const initial = detail.fullName ? detail.fullName.charAt(0).toUpperCase() : '—'
+  const handleApprove = async () => {
+    if (!id) return
+    try {
+      const result = await updateApproval({ id, body: { action: 'approve', reason: 'All documents verified' } }).unwrap()
+      sSnack(result?.message ?? 'Vendor approved successfully')
+      setApproveModalOpen(false)
+      refetch()
+    } catch (err: unknown) {
+      eSnack((err as { data?: { message?: string } })?.data?.message ?? 'Failed to approve vendor')
+    }
+  }
+  const handleReject = async () => {
+    if (!id) return
+    try {
+      const result = await updateApproval({ id, body: { action: 'reject', reason: 'Application rejected' } }).unwrap()
+      sSnack(result?.message ?? 'Vendor rejected')
+      setRejectModalOpen(false)
+      refetch()
+    } catch (err: unknown) {
+      eSnack((err as { data?: { message?: string } })?.data?.message ?? 'Failed to reject vendor')
+    }
+  }
+  const handleInactivate = async () => {
+    if (!id) return
+    try {
+      const result = await updateStatus({ id, body: { action: 'suspend', reason: 'Inactivated from admin' } }).unwrap()
+      sSnack(result?.message ?? 'Vendor inactivated')
+      setInactivateModalOpen(false)
+      refetch()
+    } catch (err: unknown) {
+      eSnack((err as { data?: { message?: string } })?.data?.message ?? 'Failed to inactivate vendor')
+    }
+  }
+  const handleDelete = async () => {
+    if (!id) return
+    try {
+      const result = await deleteVendor(id).unwrap()
+      sSnack(result?.message ?? 'Vendor deleted successfully')
+      setDeleteModalOpen(false)
+      navigate('/vendors')
+    } catch (err: unknown) {
+      eSnack((err as { data?: { message?: string } })?.data?.message ?? 'Failed to delete vendor')
+    }
+  }
+
+  const initial = detail.fullName ? detail.fullName.charAt(0).toUpperCase() : NA
 
   return (
     <div className="space-y-6">
@@ -226,7 +268,7 @@ const VendorDetail = () => {
                 {detail.status}
               </span>
             </div>
-            {detail.website && detail.website !== '—' && (
+            {detail.website && detail.website !== NA && (
               <a
                 href={detail.website.startsWith('http') ? detail.website : `https://${detail.website}`}
                 target="_blank"
@@ -366,7 +408,7 @@ const VendorDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setRejectModalOpen(false), variant: 'secondary' },
-          { label: 'Reject Vendor', onClick: () => { console.log('Reject', id); setRejectModalOpen(false); }, variant: 'danger' },
+          { label: 'Reject Vendor', onClick: handleReject, variant: 'danger', disabled: isApprovalLoading },
         ]}
       />
 
@@ -378,7 +420,7 @@ const VendorDetail = () => {
         iconType="success"
         actions={[
           { label: 'Cancel', onClick: () => setApproveModalOpen(false), variant: 'secondary' },
-          { label: 'Approve Vendor', onClick: () => { console.log('Approve', id); setApproveModalOpen(false); }, variant: 'primary' },
+          { label: 'Approve Vendor', onClick: handleApprove, variant: 'primary', disabled: isApprovalLoading },
         ]}
       />
 
@@ -390,7 +432,7 @@ const VendorDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setInactivateModalOpen(false), variant: 'secondary' },
-          { label: 'Inactivate Vendor', onClick: () => { console.log('Inactivate', id); setInactivateModalOpen(false); }, variant: 'danger' },
+          { label: 'Inactivate Vendor', onClick: handleInactivate, variant: 'danger', disabled: isStatusLoading },
         ]}
       />
 
@@ -402,7 +444,7 @@ const VendorDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setDeleteModalOpen(false), variant: 'secondary' },
-          { label: 'Delete Vendor', onClick: () => { console.log('Delete', id); setDeleteModalOpen(false); }, variant: 'danger' },
+          { label: 'Delete Vendor', onClick: handleDelete, variant: 'danger', disabled: isDeleteLoading },
         ]}
       />
     </div>
