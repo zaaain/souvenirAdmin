@@ -54,18 +54,24 @@ function DonutChart({
           dataKey="value"
           label={
             showLabel
-              ? ((props: {
-                  cx: number
-                  cy: number
-                  midAngle: number
-                  innerRadius: number
-                  outerRadius: number
-                  percent: number
+              ? (props: {
+                  cx?: number
+                  cy?: number
+                  midAngle?: number
+                  innerRadius?: number
+                  outerRadius?: number
+                  percent?: number
                 }) => {
                   const RADIAN = Math.PI / 180
-                  const r = (props.innerRadius + props.outerRadius) / 2
-                  const x = props.cx + r * Math.cos(-props.midAngle * RADIAN)
-                  const y = props.cy + r * Math.sin(-props.midAngle * RADIAN)
+                  const cx = props.cx ?? 0
+                  const cy = props.cy ?? 0
+                  const midAngle = props.midAngle ?? 0
+                  const innerRadius = props.innerRadius ?? 0
+                  const outerRadius = props.outerRadius ?? 0
+                  const percent = props.percent ?? 0
+                  const r = (innerRadius + outerRadius) / 2
+                  const x = cx + r * Math.cos(-midAngle * RADIAN)
+                  const y = cy + r * Math.sin(-midAngle * RADIAN)
                   return (
                     <text
                       x={x}
@@ -75,11 +81,11 @@ function DonutChart({
                       textAnchor="middle"
                       dominantBaseline="central"
                     >
-                      {(props.percent * 100).toFixed(0)}%
+                      {(percent * 100).toFixed(0)}%
                     </text>
                   )
-                }) as unknown
-              : false
+                }
+              : undefined
           }
           labelLine={false}
         >

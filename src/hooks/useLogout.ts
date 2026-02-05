@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from './redux'
 import { logout } from '@store/features/auth/authReducer'
-import { persistor } from '@store'
+import { persistor } from '../store'
 
 /**
  * Custom hook for handling logout functionality

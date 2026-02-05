@@ -10,7 +10,7 @@ import {
   SalesTrendsCard,
   RecentOrdersCard,
 } from '@components/card'
-import type { IconType, ComparisonTrend } from '@components/card'
+import type { IconType, ComparisonTrend, VisitsByDeviceItem } from '@components/card'
 import dashboardStatsJson from '@/data/dashboardStats.json'
 import dashboardChartsJson from '@/data/dashboardCharts.json'
 
@@ -159,7 +159,7 @@ const Dashboard = () => {
           <VisitsByDeviceCard
             title={CHARTS_DATA.analyticsCards.visitsByDevice.title}
             subtitle={CHARTS_DATA.analyticsCards.visitsByDevice.subtitle}
-            items={CHARTS_DATA.analyticsCards.visitsByDevice.items}
+            items={CHARTS_DATA.analyticsCards.visitsByDevice.items as VisitsByDeviceItem[]}
             loading={CHARTS_DATA.analyticsCards.visitsByDevice.loading}
           />
           <div className="flex-1 min-h-0 flex">
