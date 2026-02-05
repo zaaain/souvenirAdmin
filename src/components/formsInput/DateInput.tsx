@@ -11,7 +11,7 @@ function DateInput({
   label,
   value,
   onChange,
-  placeholder = 'Select Date',
+  placeholder: _placeholder = 'Select Date',
   disabled = false,
   className = '',
 }: DateInputProps) {
@@ -28,6 +28,7 @@ function DateInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          title={_placeholder}
           className="w-full font-Manrope h-10 pl-4 pr-10 py-2 bg-inputBg border border-[#DDD] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-0"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">

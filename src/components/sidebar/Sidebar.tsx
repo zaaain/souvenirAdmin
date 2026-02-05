@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import Logo from '@assets/svg/logo.svg'
@@ -18,8 +18,8 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const isRTL = i18n.language === 'ar'
   
   // RTL styles using rtl-css-js
-  const sidebarStyles = useMemo(() => {
-    const baseStyles = {
+  const sidebarStyles = useMemo((): React.CSSProperties => {
+    const baseStyles: React.CSSProperties = {
       width: '280px',
       backgroundColor: 'white',
       boxShadow: '2px 0 8px rgba(0, 0, 0, 0.05)',
@@ -30,11 +30,11 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       height: '100vh',
       zIndex: 100,
     }
-    return isRTL ? rtlcss({ ...baseStyles, right: 0 }) : { ...baseStyles, left: 0 }
+    return (isRTL ? rtlcss({ ...baseStyles, right: 0 }) : { ...baseStyles, left: 0 }) as React.CSSProperties
   }, [isRTL])
-  
-  const menuItemStyles = useMemo(() => {
-    const baseStyles = {
+
+  const menuItemStyles = useMemo((): React.CSSProperties => {
+    const baseStyles: React.CSSProperties = {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
@@ -43,7 +43,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       borderRadius: '8px',
       textAlign: 'left',
     }
-    return isRTL ? rtlcss({ ...baseStyles, textAlign: 'right' }) : baseStyles
+    return (isRTL ? rtlcss({ ...baseStyles, textAlign: 'right' }) : baseStyles) as React.CSSProperties
   }, [isRTL])
 
   const menuItems = [

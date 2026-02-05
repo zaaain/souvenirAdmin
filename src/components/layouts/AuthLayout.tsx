@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAppSelector } from '@hooks/redux'
 import { selectToken, selectIsAuthenticated } from '@store/features/auth/authReducer'

@@ -45,7 +45,7 @@ function DonutChart({
       <ResponsiveContainer width="100%" height={size}>
         <PieChart>
         <Pie
-          data={data}
+          data={data as unknown as { name: string; value: number; color: string }[]}
           cx="50%"
           cy="50%"
           innerRadius={innerRadius}
@@ -54,7 +54,7 @@ function DonutChart({
           dataKey="value"
           label={
             showLabel
-              ? (props: {
+              ? ((props: {
                   cx: number
                   cy: number
                   midAngle: number
@@ -78,7 +78,7 @@ function DonutChart({
                       {(props.percent * 100).toFixed(0)}%
                     </text>
                   )
-                }
+                }) as unknown
               : false
           }
           labelLine={false}

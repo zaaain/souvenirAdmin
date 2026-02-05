@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import OtpInput from 'react-otp-input'
 import { Button } from '@components/buttons'
@@ -46,24 +46,24 @@ const OTPForm = () => {
         console.log('OTP verified:', result)
         
         // Store profileData and token in Redux
+        let authToken = ''
         if (result?.data) {
           const { token, ...profileData } = result.data
+          authToken = token
           dispatch(setProfileData({
             profileData: profileData,
             token: token
           }))
         }
-        
+
         // Call get profile API after successful OTP verification
         try {
-          const profileResult = await getProfile().unwrap()
+          const profileResult = await getProfile(undefined).unwrap()
           console.log('Profile fetched:', profileResult)
-          
-          // Update profile data if API returns different structure
           if (profileResult?.data) {
             dispatch(setProfileData({
               profileData: profileResult.data,
-              token: result?.data?.token || token
+              token: authToken
             }))
           }
         } catch (profileError) {
