@@ -219,14 +219,14 @@ const LoginForm = () => {
         </Button>
       </form>
 
-      <div className="mt-6 text-center">
+      {/* <div className="mt-6 text-center">
         <p className="text-sm text-gray-600 font-Manrope">
           Don't have an account?{' '}
           <Link to="/auth/register" className="text-primary font-semibold">
             Sign Up
           </Link>
         </p>
-      </div>
+      </div> */}
 
       <div className="mt-4 flex justify-center space-x-4 text-sm">
         <Link to="/terms" className="text-primary font-Manrope">
