@@ -7,6 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // GitHub Pages: repo name subpath. Local dev mein '/' (default)
+  base: process.env.GITHUB_ACTIONS ? '/souvenirAdmin/' : '/',
   plugins: [react()],
   resolve: {
     alias: {

@@ -24,7 +24,8 @@ import TeamDetail from '@pages/team/TeamDetail'
 import AddAdmin from '@pages/team/AddAdmin'
 import NotFound from '@pages/404/NotFound'
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
   {
     path: '/auth',
     element: <AuthLayout />,
@@ -125,5 +126,7 @@ export const router = createBrowserRouter([
     path: '*',
     element: <NotFound />,
   },
-])
+  ],
+  { basename: import.meta.env.BASE_URL }
+)
 

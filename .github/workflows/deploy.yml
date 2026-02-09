@@ -8,6 +8,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # GITHUB_TOKEN ko gh-pages branch par push karne ki permission (403 fix)
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
