@@ -4,6 +4,7 @@ import { Filter } from '@components/filter'
 import { Modal } from '@components/modal'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
+import { useGetProductsQuery, useDeleteProductMutation } from '@store/features/product'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -30,25 +31,37 @@ function ProductIcon() {
   )
 }
 
-const MOCK_PRODUCTS: Record<string, unknown>[] = [
-  { productId: 'p-001', productName: 'Amoxicillin 50MG', sku: '302012', category: 'Vitamins', inventory: 0, price: '$123,000', dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Pending' },
-  { productId: 'p-002', productName: 'PetCalcium Plus', sku: '302013', category: 'Animal Medicines', inventory: 120, price: '$45.99', dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Published' },
-  { productId: 'p-003', productName: 'Multi-Vitamin Drops', sku: '302014', category: 'Feed & Nutrition', inventory: 142, price: '$28.50', dateAdded: 'Jan 14, 2025', dateAddedRaw: '2025-01-14', status: 'Published' },
-  { productId: 'p-004', productName: 'Joint Care Supplement', sku: '302015', category: 'Supplements', inventory: 429, price: '$67.00', dateAdded: 'Jan 13, 2025', dateAddedRaw: '2025-01-13', status: 'Suspended' },
-  { productId: 'p-005', productName: 'Amoxicillin 50MG', sku: '302016', category: 'Animal Medicines', inventory: 123, price: '$52.00', dateAdded: 'Jan 12, 2025', dateAddedRaw: '2025-01-12', status: 'Suspended' },
-  { productId: 'p-006', productName: 'Omega Fish Oil', sku: '302017', category: 'Vitamins', inventory: 532, price: '$34.99', dateAdded: 'Jan 11, 2025', dateAddedRaw: '2025-01-11', status: 'Rejected' },
-  { productId: 'p-007', productName: 'Probiotic Blend', sku: '302018', category: 'Supplements', inventory: 89, price: '$41.50', dateAdded: 'Jan 10, 2025', dateAddedRaw: '2025-01-10', status: 'Published' },
-  { productId: 'p-008', productName: 'Dewormer Tablets', sku: '302019', category: 'Animal Medicines', inventory: 256, price: '$19.99', dateAdded: 'Jan 9, 2025', dateAddedRaw: '2025-01-09', status: 'Pending' },
-  { productId: 'p-009', productName: 'Organic Feed Mix', sku: '302020', category: 'Feed & Nutrition', inventory: 78, price: '$89.00', dateAdded: 'Jan 8, 2025', dateAddedRaw: '2025-01-08', status: 'Published' },
-  { productId: 'p-010', productName: 'Skin & Coat Formula', sku: '302021', category: 'Supplements', inventory: 312, price: '$56.75', dateAdded: 'Jan 7, 2025', dateAddedRaw: '2025-01-07', status: 'Suspended' },
-  { productId: 'p-011', productName: 'Flea & Tick Spray', sku: '302022', category: 'Animal Medicines', inventory: 205, price: '$22.00', dateAdded: 'Jan 6, 2025', dateAddedRaw: '2025-01-06', status: 'Published' },
-  { productId: 'p-012', productName: 'Digestive Enzymes', sku: '302023', category: 'Supplements', inventory: 167, price: '$38.50', dateAdded: 'Jan 5, 2025', dateAddedRaw: '2025-01-05', status: 'Pending' },
-  { productId: 'p-013', productName: 'Premium Dog Food', sku: '302024', category: 'Feed & Nutrition', inventory: 89, price: '$72.99', dateAdded: 'Jan 4, 2025', dateAddedRaw: '2025-01-04', status: 'Published' },
-  { productId: 'p-014', productName: 'Antibiotic Ointment', sku: '302025', category: 'Animal Medicines', inventory: 0, price: '$15.99', dateAdded: 'Jan 3, 2025', dateAddedRaw: '2025-01-03', status: 'Rejected' },
-  { productId: 'p-015', productName: 'Vitamin B Complex', sku: '302026', category: 'Vitamins', inventory: 445, price: '$29.00', dateAdded: 'Jan 2, 2025', dateAddedRaw: '2025-01-02', status: 'Suspended' },
-]
-
 const ITEMS_PER_PAGE = 10
+
+function mapProductRow(p: Record<string, unknown>, rowIndex: number): Record<string, unknown> {
+  const id = p._id ?? p.productId ?? p.id ?? ''
+  const name = p.name ?? p.productName ?? p.title ?? ''
+  const sku = p.sku ?? p.skuCode ?? ''
+  const category = typeof p.category === 'object' && p.category && !Array.isArray(p.category)
+    ? (p.category as Record<string, unknown>).name ?? (p.category as Record<string, unknown>).categoryName ?? ''
+    : String(p.category ?? p.categoryName ?? '')
+  const inventory = p.inventory ?? p.stock ?? p.quantity ?? 0
+  const priceRaw = p.price ?? p.unitPrice ?? 0
+  const price = typeof priceRaw === 'number' ? `$${Number(priceRaw).toLocaleString()}` : String(priceRaw ?? '')
+  const dateRaw = p.createdAt ?? p.updatedAt ?? p.dateAdded ?? ''
+  const dateFormatted =
+    typeof dateRaw === 'string' && dateRaw.length >= 10
+      ? new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : String(dateRaw ?? '')
+  const status = String(p.status ?? (p.isActive === true ? 'Published' : 'Pending'))
+  return {
+    productId: id,
+    productName: name,
+    sku,
+    category,
+    inventory,
+    price,
+    dateAdded: dateFormatted,
+    dateAddedRaw: typeof dateRaw === 'string' ? dateRaw.slice(0, 10) : dateRaw,
+    status,
+    rowNum: rowIndex + 1,
+  }
+}
 
 function buildColumns(onView: (id: string) => void, onDelete: (id: string) => void): TableColumn[] {
   return [
@@ -121,30 +134,31 @@ const Products = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
 
-  const filtered = useMemo(() => {
-    let list = [...MOCK_PRODUCTS]
-    if (status !== 'all') list = list.filter((r) => r.status === status)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        (r) =>
-          String(r.productName).toLowerCase().includes(q) ||
-          String(r.sku).toLowerCase().includes(q) ||
-          String(r.category).toLowerCase().includes(q)
-      )
-    }
-    if (dateAdded) {
-      list = list.filter((r) => String(r.dateAddedRaw ?? '') === dateAdded)
-    }
-    return list
-  }, [search, status, dateAdded])
+  const { data, isLoading, isError, error } = useGetProductsQuery({ page, pageSize: ITEMS_PER_PAGE })
+  const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
 
-  const total = filtered.length
+  const rawList = useMemo(() => {
+    const res = data as Record<string, unknown> | undefined
+    if (!res) return []
+    const dataObj = res.data as Record<string, unknown> | undefined
+    const products = dataObj?.products ?? dataObj?.content ?? (Array.isArray(dataObj) ? dataObj : [])
+    return Array.isArray(products) ? (products as Record<string, unknown>[]) : []
+  }, [data])
+
   const start = (page - 1) * ITEMS_PER_PAGE
-  const sliced = filtered.slice(start, start + ITEMS_PER_PAGE).map((r, i) => ({
-    ...r,
-    rowNum: start + i + 1,
-  }))
+  const tableData = useMemo(
+    () => rawList.map((r, i) => mapProductRow(r, start + i)),
+    [rawList, page]
+  )
+
+  const total = useMemo(() => {
+    const res = data as Record<string, unknown> | undefined
+    const dataObj = res?.data as Record<string, unknown> | undefined
+    if (dataObj?.totalProducts != null) return Number(dataObj.totalProducts)
+    if (dataObj?.totalElements != null) return Number(dataObj.totalElements)
+    if (dataObj?.total != null) return Number(dataObj.total)
+    return tableData.length
+  }, [data, tableData.length])
 
   const columns = useMemo(
     () =>
@@ -201,13 +215,19 @@ const Products = () => {
         onClearAll={handleClearAll}
       />
 
+      {isError && (
+        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-red-600">
+          {String((error as { data?: { message?: string } })?.data?.message ?? (error as Error)?.message ?? 'Failed to load products')}
+        </div>
+      )}
       <PaginateTable
         headers={columns}
-        data={sliced}
+        data={tableData}
         currentPage={page}
         itemsPerPage={ITEMS_PER_PAGE}
         totalResults={total}
         onPageChange={setPage}
+        loading={isLoading}
       />
 
       <Modal
@@ -218,7 +238,21 @@ const Products = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => { setDeleteModalOpen(false); setDeleteProductId(null) }, variant: 'secondary' },
-          { label: 'Delete Product', onClick: () => { console.log('Delete', deleteProductId); setDeleteModalOpen(false); setDeleteProductId(null) }, variant: 'danger' },
+          {
+            label: isDeleting ? 'Deleting...' : 'Delete Product',
+            onClick: async () => {
+              if (deleteProductId) {
+                try {
+                  await deleteProduct(deleteProductId).unwrap()
+                  setDeleteModalOpen(false)
+                  setDeleteProductId(null)
+                } catch {
+                  // Error can be shown via toast
+                }
+              }
+            },
+            variant: 'danger',
+          },
         ]}
       />
     </div>

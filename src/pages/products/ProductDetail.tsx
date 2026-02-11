@@ -1,8 +1,15 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { TailSpin } from 'react-loader-spinner'
 import { VendorInfoCard } from '@components/card'
 import type { VendorInfoCardItem } from '@components/card'
 import { Modal } from '@components/modal'
+import {
+  useGetProductByIdQuery,
+  useUpdateProductApprovalMutation,
+  useUpdateProductStatusMutation,
+  useDeleteProductMutation,
+} from '@store/features/product'
 
 const STATUS_PILL: Record<string, string> = {
   Pending: 'bg-amber-100 text-amber-700',
@@ -10,27 +17,6 @@ const STATUS_PILL: Record<string, string> = {
   Suspended: 'bg-red-100 text-red-700',
   Rejected: 'bg-red-100 text-red-600',
 }
-
-const MOCK_PRODUCTS: Record<string, unknown>[] = [
-  { productId: 'p-001', productName: 'Amoxicillin 50MG', sku: '302012', category: 'Vitamins', status: 'Pending' },
-  { productId: 'p-002', productName: 'PetCalcium Plus', sku: '302013', category: 'Animal Medicines', status: 'Published' },
-  { productId: 'p-003', productName: 'Multi-Vitamin Drops', sku: '302014', category: 'Feed & Nutrition', status: 'Published' },
-  { productId: 'p-004', productName: 'Joint Care Supplement', sku: '302015', category: 'Supplements', status: 'Suspended' },
-  { productId: 'p-005', productName: 'Amoxicillin 50MG', sku: '302016', category: 'Animal Medicines', status: 'Suspended' },
-  { productId: 'p-006', productName: 'Omega Fish Oil', sku: '302017', category: 'Vitamins', status: 'Rejected' },
-  { productId: 'p-007', productName: 'Probiotic Blend', sku: '302018', category: 'Supplements', status: 'Published' },
-  { productId: 'p-008', productName: 'Dewormer Tablets', sku: '302019', category: 'Animal Medicines', status: 'Pending' },
-  { productId: 'p-009', productName: 'Organic Feed Mix', sku: '302020', category: 'Feed & Nutrition', status: 'Published' },
-  { productId: 'p-010', productName: 'Skin & Coat Formula', sku: '302021', category: 'Supplements', status: 'Suspended' },
-  { productId: 'p-011', productName: 'Flea & Tick Spray', sku: '302022', category: 'Animal Medicines', status: 'Published' },
-  { productId: 'p-012', productName: 'Digestive Enzymes', sku: '302023', category: 'Supplements', status: 'Pending' },
-  { productId: 'p-013', productName: 'Premium Dog Food', sku: '302024', category: 'Feed & Nutrition', status: 'Published' },
-  { productId: 'p-014', productName: 'Antibiotic Ointment', sku: '302025', category: 'Animal Medicines', status: 'Rejected' },
-  { productId: 'p-015', productName: 'Vitamin B Complex', sku: '302026', category: 'Vitamins', status: 'Suspended' },
-]
-
-const LOREM =
-  'Euismod purus a vel gravida interdum consectetur diam fermentum ultrices. Augue bibendum diam in elit eu laoreet faucibus ultrices. Condimentum phasellus non neque diam dignissim enim purus pulvinar. Eleifend tincidunt vitae id vitae venenatis. Turpis turpis eu quam ut non non elit eget. Tortor nunc at pharetra posuere justo neque. Ut suspendisse massa lobortis suscipit velit. Massa tellus ut condimentum dapibus eget lacinia suspendisse tristique egestas. Non volutpat sagittis etiam vel ac nisi vulputate elit. Parturient mollis vitae arcu iaculis donec turpis curabitur blandit orci. Tempus nunc tellus cursus cras placerat. Enim semper aliquet a eget dignissim amet ante molestie. At quisque ipsum tincidunt nunc et in vitae. Fringilla mauris at ipsum ipsum suspendisse elementum. Pellentesque pulvinar nulla arcu in tincidunt vestibulum diam vulputate. Et a.'
 
 interface ProductDetailData {
   productName: string
@@ -41,83 +27,118 @@ interface ProductDetailData {
   images: string[]
 }
 
-const MOCK_DETAIL: Record<string, ProductDetailData> = {
-  'p-001': {
-    productName: 'Amoxicillin',
-    status: 'Pending',
-    general: [
-      { label: 'Product Category', value: 'Medication' },
-      { label: 'SKU', value: '1234321' },
-      { label: 'Quantity Available (Stock)', value: '50' },
-      { label: 'Description', value: LOREM, colSpan: 3 },
-    ],
-    pricing: [
-      { label: 'Pricing', value: '$50.00' },
-      { label: 'VAT Amount (%)', value: '0%' },
-      { label: 'Discount Type', value: 'Percentage' },
-      { label: 'Discount Percentage (%)', value: '50%' },
-    ],
-    shipping: [
-      { label: 'Weight (kg)', value: '0.2' },
-      { label: 'Dimensions [Height x Length x Width] (cm)', value: '120 x 320 x 120' },
-    ],
-    images: [
-      'https://picsum.photos/seed/p001-1/240/240',
-      'https://picsum.photos/seed/p001-2/240/240',
-      'https://picsum.photos/seed/p001-3/240/240',
-      'https://picsum.photos/seed/p001-4/240/240',
-      'https://picsum.photos/seed/p001-5/240/240',
-      'https://picsum.photos/seed/p001-6/240/240',
-    ],
-  },
-}
+const BASE_URL = 'http://18.130.102.234:9078'
 
-function getProductDetail(id: string): ProductDetailData | null {
-  if (MOCK_DETAIL[id]) return MOCK_DETAIL[id]
-  const fromList = MOCK_PRODUCTS.find((v) => String(v.productId) === id) as Record<string, unknown> | undefined
-  if (!fromList) return null
+function mapApiProductToDetail(raw: Record<string, unknown>): ProductDetailData {
+  const name = String(raw.name ?? raw.productName ?? raw.title ?? '—')
+  const statusRaw = String(raw.status ?? (raw.isActive === true ? 'Published' : 'Pending'))
+  const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1).toLowerCase()
+  const category =
+    typeof raw.category === 'object' && raw.category && !Array.isArray(raw.category)
+      ? String((raw.category as Record<string, unknown>).name ?? (raw.category as Record<string, unknown>).categoryName ?? '—')
+      : String(raw.category ?? raw.categoryName ?? '—')
+  const sku = String(raw.sku ?? raw.skuCode ?? '—')
+  const stock = raw.stock ?? raw.inventory ?? raw.quantity ?? '—'
+  const description = String(raw.description ?? '—')
+  const priceRaw = raw.price ?? raw.unitPrice ?? raw.pricing ?? 0
+  const price = typeof priceRaw === 'number' ? `$${Number(priceRaw).toLocaleString()}` : String(priceRaw ?? '—')
+  const vat = raw.vat ?? raw.vatAmount ?? raw.tax ?? '—'
+  const vatStr = typeof vat === 'number' ? `${vat}%` : String(vat)
+  const discountType = String(raw.discountType ?? '—')
+  const discountPct = raw.discount ?? raw.discountPercentage ?? raw.discountPercent ?? '—'
+  const discountStr = typeof discountPct === 'number' ? `${discountPct}%` : String(discountPct)
+
+  const shippingDetails = raw.shippingDetails as Record<string, unknown> | undefined
+  const weight = shippingDetails?.weight ?? raw.weight ?? raw.weightKg ?? '—'
+  const height = shippingDetails?.height ?? '—'
+  const length = shippingDetails?.length ?? '—'
+  const width = shippingDetails?.width ?? '—'
+  const dimensions =
+    [height, length, width].every((v) => v !== '—' && v !== '')
+      ? `${height} x ${length} x ${width}`
+      : String(raw.dimensions ?? raw.size ?? '—')
+
+  const general: VendorInfoCardItem[] = [
+    { label: 'Product Category', value: category },
+    { label: 'SKU', value: sku },
+    { label: 'Quantity Available (Stock)', value: String(stock) },
+    { label: 'Description', value: description || '—', colSpan: 3 },
+  ]
+
+  const pricing: VendorInfoCardItem[] = [
+    { label: 'Pricing', value: price },
+    { label: 'VAT Amount (%)', value: vatStr },
+    { label: 'Discount Type', value: discountType },
+    { label: 'Discount Percentage (%)', value: discountStr },
+  ]
+
+  const shipping: VendorInfoCardItem[] = [
+    { label: 'Weight (kg)', value: String(weight) },
+    { label: 'Dimensions [Height x Length x Width] (cm)', value: dimensions },
+  ]
+
+  let images: string[] = []
+  const imgField = raw.images
+  if (Array.isArray(imgField)) {
+    images = imgField.flatMap((item: unknown) => {
+      if (typeof item === 'string') {
+        return item.split(',').map((s) => s.trim()).filter(Boolean)
+      }
+      if (item && typeof item === 'object' && 'url' in item) return [String((item as { url: string }).url)]
+      if (item && typeof item === 'object' && 'image' in item) return [String((item as { image: string }).image)]
+      return []
+    }).filter(Boolean)
+  } else if (typeof imgField === 'string') {
+    images = imgField.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  const featureImage = raw.featureImage ? String(raw.featureImage) : ''
+  if (featureImage) {
+    const fullUrl = featureImage.startsWith('http') ? featureImage : `${BASE_URL}${featureImage.startsWith('/') ? '' : '/'}${featureImage}`
+    if (!images.includes(fullUrl)) images = [fullUrl, ...images]
+  }
+  if (raw.imageUrl && typeof raw.imageUrl === 'string') images = [raw.imageUrl, ...images]
+  if (raw.thumbnail && typeof raw.thumbnail === 'string') images = [raw.thumbnail, ...images]
+  if (images.length === 0) {
+    images = ['https://picsum.photos/seed/product/240/240']
+  }
+
   return {
-    productName: String(fromList.productName ?? '—'),
-    status: String(fromList.status ?? '—'),
-    general: [
-      { label: 'Product Category', value: String(fromList.category ?? '—') },
-      { label: 'SKU', value: String(fromList.sku ?? '—') },
-      { label: 'Quantity Available (Stock)', value: '—' },
-      { label: 'Description', value: '—', colSpan: 3 },
-    ],
-    pricing: [
-      { label: 'Pricing', value: '—' },
-      { label: 'VAT Amount (%)', value: '—' },
-      { label: 'Discount Type', value: '—' },
-      { label: 'Discount Percentage (%)', value: '—' },
-    ],
-    shipping: [
-      { label: 'Weight (kg)', value: '—' },
-      { label: 'Dimensions [Height x Length x Width] (cm)', value: '—' },
-    ],
-    images: [
-      'https://picsum.photos/seed/def1/240/240',
-      'https://picsum.photos/seed/def2/240/240',
-      'https://picsum.photos/seed/def3/240/240',
-    ],
+    productName: name,
+    status,
+    general,
+    pricing,
+    shipping,
+    images,
   }
 }
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [approveModalOpen, setApproveModalOpen] = useState(false)
   const [suspendModalOpen, setSuspendModalOpen] = useState(false)
   const [reactivateModalOpen, setReactivateModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const detail = id ? getProductDetail(id) : null
+
+  const { data, isLoading, isError, error } = useGetProductByIdQuery(id!, { skip: !id })
+  const [updateApproval, { isLoading: isApprovalLoading }] = useUpdateProductApprovalMutation()
+  const [updateStatus, { isLoading: isStatusLoading }] = useUpdateProductStatusMutation()
+  const [deleteProduct, { isLoading: isDeleteLoading }] = useDeleteProductMutation()
+
+  const detail = useMemo(() => {
+    if (!data) return null
+    const raw = (data as Record<string, unknown>)?.data ?? data
+    const product = typeof raw === 'object' && raw && !Array.isArray(raw) ? raw as Record<string, unknown> : {}
+    return mapApiProductToDetail(product)
+  }, [data])
 
   const isPending = detail?.status === 'Pending'
   const isPublished = detail?.status === 'Published'
   const isSuspended = detail?.status === 'Suspended'
   const isRejected = detail?.status === 'Rejected'
 
-  if (!id || !detail) {
+  if (!id) {
     return (
       <div className="space-y-4">
         <Link to="/products" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
@@ -131,12 +152,35 @@ const ProductDetail = () => {
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <TailSpin visible height={60} width={60} color="#2466D0" ariaLabel="Loading product" />
+      </div>
+    )
+  }
+
+  if (isError || !detail) {
+    return (
+      <div className="space-y-4">
+        <Link to="/products" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Products
+        </Link>
+        <p className="text-gray-600">
+          {String((error as { data?: { message?: string } })?.data?.message ?? (error as Error)?.message ?? 'Product not found.')}
+        </p>
+      </div>
+    )
+  }
+
   const statusClass = STATUS_PILL[detail.status] ?? 'bg-gray-100 text-gray-600'
   const initial = detail.productName ? detail.productName.charAt(0).toUpperCase() : '—'
 
   return (
     <div className="space-y-6">
-      {/* Header: Back | Avatar (first letter, same as VendorDetail) | Name + Status | Reject, Approve / Delete, Suspend / etc. */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <Link
@@ -219,7 +263,6 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* General Information: grid + Description (normal weight) */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
         <h3 className="text-base font-ManropeBold text-gray-800 mb-2">General Information</h3>
         <div className="border-b border-gray-200 mb-4" />
@@ -233,7 +276,7 @@ const ProductDetail = () => {
         </div>
         {(() => {
           const d = detail.general.find((i) => i.label === 'Description')
-          if (!d || !d.value) return null
+          if (!d || !d.value || d.value === '—') return null
           return (
             <div className="mt-4">
               <p className="text-xs font-Manrope text-gray-500">Description</p>
@@ -245,7 +288,6 @@ const ProductDetail = () => {
       <VendorInfoCard heading="Pricing" data={detail.pricing} />
       <VendorInfoCard heading="Shipping" data={detail.shipping} />
 
-      {/* Product Images */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
         <h3 className="text-base font-ManropeBold text-gray-800 mb-2">Product Images</h3>
         <div className="border-b border-gray-200 mb-4" />
@@ -266,7 +308,20 @@ const ProductDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setRejectModalOpen(false), variant: 'secondary' },
-          { label: 'Reject Product', onClick: () => { console.log('Reject', id); setRejectModalOpen(false); }, variant: 'danger' },
+          {
+            label: isApprovalLoading ? 'Rejecting...' : 'Reject Product',
+            onClick: async () => {
+              if (!id) return
+              try {
+                await updateApproval({ id, body: { action: 'reject' } }).unwrap()
+                setRejectModalOpen(false)
+              } catch {
+                // Error can be shown via toast
+              }
+            },
+            variant: 'danger',
+            disabled: isApprovalLoading,
+          },
         ]}
       />
 
@@ -278,7 +333,20 @@ const ProductDetail = () => {
         iconType="success"
         actions={[
           { label: 'Cancel', onClick: () => setApproveModalOpen(false), variant: 'secondary' },
-          { label: 'Approve Product', onClick: () => { console.log('Approve', id); setApproveModalOpen(false); }, variant: 'primary' },
+          {
+            label: isApprovalLoading ? 'Approving...' : 'Approve Product',
+            onClick: async () => {
+              if (!id) return
+              try {
+                await updateApproval({ id, body: { action: 'approve' } }).unwrap()
+                setApproveModalOpen(false)
+              } catch {
+                // Error can be shown via toast
+              }
+            },
+            variant: 'primary',
+            disabled: isApprovalLoading,
+          },
         ]}
       />
 
@@ -290,7 +358,20 @@ const ProductDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setSuspendModalOpen(false), variant: 'secondary' },
-          { label: 'Suspend Product', onClick: () => { console.log('Suspend', id); setSuspendModalOpen(false); }, variant: 'danger' },
+          {
+            label: isStatusLoading ? 'Suspending...' : 'Suspend Product',
+            onClick: async () => {
+              if (!id) return
+              try {
+                await updateStatus({ id, body: { action: 'suspend' } }).unwrap()
+                setSuspendModalOpen(false)
+              } catch {
+                // Error can be shown via toast
+              }
+            },
+            variant: 'danger',
+            disabled: isStatusLoading,
+          },
         ]}
       />
 
@@ -302,7 +383,20 @@ const ProductDetail = () => {
         iconType="success"
         actions={[
           { label: 'Cancel', onClick: () => setReactivateModalOpen(false), variant: 'secondary' },
-          { label: 'Reactivate Product', onClick: () => { console.log('Reactivate', id); setReactivateModalOpen(false); }, variant: 'primary' },
+          {
+            label: isStatusLoading ? 'Reactivating...' : 'Reactivate Product',
+            onClick: async () => {
+              if (!id) return
+              try {
+                await updateStatus({ id, body: { action: 'reactivate' } }).unwrap()
+                setReactivateModalOpen(false)
+              } catch {
+                // Error can be shown via toast
+              }
+            },
+            variant: 'primary',
+            disabled: isStatusLoading,
+          },
         ]}
       />
 
@@ -314,7 +408,21 @@ const ProductDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setDeleteModalOpen(false), variant: 'secondary' },
-          { label: 'Delete Product', onClick: () => { console.log('Delete', id); setDeleteModalOpen(false); }, variant: 'danger' },
+          {
+            label: isDeleteLoading ? 'Deleting...' : 'Delete Product',
+            onClick: async () => {
+              if (!id) return
+              try {
+                await deleteProduct(id).unwrap()
+                setDeleteModalOpen(false)
+                navigate('/products')
+              } catch {
+                // Error can be shown via toast
+              }
+            },
+            variant: 'danger',
+            disabled: isDeleteLoading,
+          },
         ]}
       />
     </div>

@@ -4,34 +4,44 @@ import { Filter } from '@components/filter'
 import { Modal } from '@components/modal'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
+import { useGetCategoriesQuery, useDeleteCategoryMutation } from '@store/features/category'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'Active', label: 'Active' },
-  { value: 'Suspended', label: 'Suspended' },
+  { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Suspended' },
 ]
 
 const STATUS_PILL: Record<string, string> = {
+  active: 'bg-primary/10 text-primary',
   Active: 'bg-primary/10 text-primary',
+  suspended: 'bg-red-100 text-red-700',
   Suspended: 'bg-red-100 text-red-700',
 }
 
-const MOCK_CATEGORIES: Record<string, unknown>[] = [
-  { categoryId: 'c-001', name: 'Medications', activeProducts: 52, dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Active' },
-  { categoryId: 'c-002', name: 'Vitamins', activeProducts: 45, dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Active' },
-  { categoryId: 'c-003', name: 'Feed', activeProducts: 18, dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Active' },
-  { categoryId: 'c-004', name: 'Supplements', activeProducts: 97, dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Suspended' },
-  { categoryId: 'c-005', name: 'Mats', activeProducts: 26, dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Active' },
-  { categoryId: 'c-006', name: 'Kennels', activeProducts: 14, dateAdded: 'Jan 15, 2025', dateAddedRaw: '2025-01-15', status: 'Suspended' },
-  { categoryId: 'c-007', name: 'Animal Medicines', activeProducts: 38, dateAdded: 'Jan 14, 2025', dateAddedRaw: '2025-01-14', status: 'Active' },
-  { categoryId: 'c-008', name: 'Feed & Nutrition', activeProducts: 62, dateAdded: 'Jan 13, 2025', dateAddedRaw: '2025-01-13', status: 'Active' },
-  { categoryId: 'c-009', name: 'Accessories', activeProducts: 23, dateAdded: 'Jan 12, 2025', dateAddedRaw: '2025-01-12', status: 'Suspended' },
-  { categoryId: 'c-010', name: 'Grooming', activeProducts: 31, dateAdded: 'Jan 11, 2025', dateAddedRaw: '2025-01-11', status: 'Active' },
-]
-
 const ITEMS_PER_PAGE = 10
 
-function buildColumns(onView: (id: string) => void, onDelete: (id: string) => void): TableColumn[] {
+function mapCategoryRow(c: Record<string, unknown>, rowIndex: number): Record<string, unknown> {
+  const id = c._id ?? c.categoryId ?? c.id ?? ''
+  const name = c.name ?? ''
+  const isActive = c.isActive !== false
+  const dateRaw = c.createdAt ?? c.updatedAt ?? c.dateAdded ?? ''
+  const dateFormatted =
+    typeof dateRaw === 'string' && dateRaw.length >= 10
+      ? new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : String(dateRaw)
+  return {
+    categoryId: id,
+    name,
+    activeProducts: c.productCount ?? c.activeProducts ?? 0,
+    dateAdded: dateFormatted,
+    dateAddedRaw: typeof dateRaw === 'string' ? dateRaw.slice(0, 10) : dateRaw,
+    status: isActive ? 'Active' : 'Suspended',
+    rowNum: rowIndex + 1,
+  }
+}
+
+function buildColumns(onDelete: (id: string) => void): TableColumn[] {
   return [
     { key: 'rowNum', label: '#' },
     { key: 'name', label: 'Category' },
@@ -52,29 +62,16 @@ function buildColumns(onView: (id: string) => void, onDelete: (id: string) => vo
       render: (_, row) => {
         const id = String(row.categoryId ?? '')
         return (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onView(id)}
-              className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded transition-colors"
-              aria-label="View"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(id)}
-              className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-              aria-label="Delete"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onDelete(id)}
+            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            aria-label="Delete"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         )
       },
     },
@@ -90,36 +87,54 @@ const Categories = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null)
 
+  const queryParams = useMemo(
+    () => ({
+      page,
+      pageSize: ITEMS_PER_PAGE,
+      ...(status !== 'all' && { status: status.toLowerCase() }),
+      ...(search.trim() && { text: search.trim() }),
+    }),
+    [page, status, search]
+  )
+
+  const { data, isLoading, isError, error } = useGetCategoriesQuery(queryParams)
+  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation()
+
+  const rawList = useMemo(() => {
+    const res = data as Record<string, unknown> | undefined
+    if (!res) return []
+    const dataObj = res.data as Record<string, unknown> | undefined
+    const categories = dataObj?.categories as Record<string, unknown>[] | undefined
+    return Array.isArray(categories) ? categories : []
+  }, [data])
+
   const filtered = useMemo(() => {
-    let list = [...MOCK_CATEGORIES]
-    if (status !== 'all') list = list.filter((r) => r.status === status)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter((r) => String(r.name).toLowerCase().includes(q))
-    }
+    const start = (page - 1) * ITEMS_PER_PAGE
+    let list = rawList.map((r, i) => mapCategoryRow(r, start + i))
     if (dateAdded) {
       list = list.filter((r) => String(r.dateAddedRaw ?? '') === dateAdded)
     }
     return list
-  }, [search, status, dateAdded])
+  }, [rawList, dateAdded, page])
 
-  const total = filtered.length
-  const start = (page - 1) * ITEMS_PER_PAGE
-  const sliced = filtered.slice(start, start + ITEMS_PER_PAGE).map((r, i) => ({
-    ...r,
-    rowNum: start + i + 1,
-  }))
+  const total = useMemo(() => {
+    const res = data as Record<string, unknown> | undefined
+    const dataObj = res?.data as Record<string, unknown> | undefined
+    if (dataObj?.totalCategories != null) return Number(dataObj.totalCategories)
+    if (res?.totalElements != null) return Number(res.totalElements)
+    if (res?.total != null) return Number(res.total)
+    return filtered.length
+  }, [data, filtered.length])
+
+  const sliced = filtered
 
   const columns = useMemo(
     () =>
-      buildColumns(
-        (id) => navigate(`/categories/${id}`),
-        (id) => {
-          setDeleteCategoryId(id)
-          setDeleteModalOpen(true)
-        }
-      ),
-    [navigate]
+      buildColumns((id) => {
+        setDeleteCategoryId(id)
+        setDeleteModalOpen(true)
+      }),
+    []
   )
 
   const handleApply = () => setPage(1)
@@ -178,6 +193,11 @@ const Categories = () => {
         onClearAll={handleClearAll}
       />
 
+      {isError && (
+        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-red-600">
+          {String((error as { data?: { message?: string } })?.data?.message ?? (error as Error)?.message ?? 'Failed to load categories')}
+        </div>
+      )}
       <PaginateTable
         headers={columns}
         data={sliced}
@@ -185,6 +205,7 @@ const Categories = () => {
         itemsPerPage={ITEMS_PER_PAGE}
         totalResults={total}
         onPageChange={setPage}
+        loading={isLoading}
       />
 
       <Modal
@@ -195,7 +216,21 @@ const Categories = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => { setDeleteModalOpen(false); setDeleteCategoryId(null) }, variant: 'secondary' },
-          { label: 'Delete Category', onClick: () => { console.log('Delete', deleteCategoryId); setDeleteModalOpen(false); setDeleteCategoryId(null) }, variant: 'danger' },
+          {
+            label: isDeleting ? 'Deleting...' : 'Delete Category',
+            onClick: async () => {
+              if (deleteCategoryId) {
+                try {
+                  await deleteCategory(deleteCategoryId).unwrap()
+                  setDeleteModalOpen(false)
+                  setDeleteCategoryId(null)
+                } catch {
+                  // Error handled by RTK / toast can be added
+                }
+              }
+            },
+            variant: 'danger',
+          },
         ]}
       />
     </div>

@@ -42,7 +42,21 @@ export const forgotPasswordSchema = yup.object().shape({
     .required('Email is required'),
 })
 
+export const addCategorySchema = yup.object().shape({
+  name: yup
+    .string()
+    .trim()
+    .required('Category name is required')
+    .min(2, 'Category name must be at least 2 characters'),
+  description: yup
+    .string()
+    .trim()
+    .optional()
+    .default(''),
+})
+
 export type LoginFormData = yup.InferType<typeof loginSchema>
 export type RegisterFormData = yup.InferType<typeof registerSchema>
 export type ForgotPasswordFormData = yup.InferType<typeof forgotPasswordSchema>
+export type AddCategoryFormData = yup.InferType<typeof addCategorySchema>
 
