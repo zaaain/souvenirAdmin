@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAppSelector } from '@hooks/redux'
 import { selectProfileData } from '@store/features/auth/authReducer'
 import { useLogout } from '@hooks/useLogout'
-import { US, QA } from 'country-flag-icons/react/3x2'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -15,17 +14,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const navigate = useNavigate()
   const profileData = useAppSelector(selectProfileData)
   const handleLogout = useLogout()
-  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
-  const languageRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdowns when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (languageRef.current && !languageRef.current.contains(event.target as Node)) {
-        setShowLanguageDropdown(false)
-      }
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setShowProfileDropdown(false)
       }
@@ -36,12 +30,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
-
-  const toggleLanguage = (lang: string) => {
-    i18n.changeLanguage(lang)
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
-    setShowLanguageDropdown(false)
-  }
 
   const handleProfileClick = () => {
     navigate('/profile')
