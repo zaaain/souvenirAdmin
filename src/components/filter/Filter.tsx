@@ -34,8 +34,8 @@ function Filter({
 }: FilterProps) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <div className="flex flex-wrap gap-4 items-end">
-        <div className="w-full md:w-full lg:flex-1 lg:min-w-0 lg:max-w-md">
+      <div className="flex flex-col lg:flex-row lg:flex-wrap gap-4 lg:items-end">
+        <div className="flex-1 min-w-0">
           <SearchInput
             label="Search"
             value={searchValue}
@@ -43,7 +43,7 @@ function Filter({
             placeholder={searchPlaceholder}
           />
         </div>
-        <div className="w-full md:w-full lg:w-40">
+        <div className="w-full lg:w-40">
           <Select
             label="Status"
             value={statusValue}
@@ -53,7 +53,7 @@ function Filter({
             rounded="lg"
           />
         </div>
-        <div className="w-full md:w-full lg:w-44">
+        <div className="w-full lg:w-44">
           <DateInput
             label={dateLabel}
             value={dateValue}
@@ -61,7 +61,7 @@ function Filter({
             placeholder={datePlaceholder}
           />
         </div>
-        <div className="w-full md:w-full lg:w-auto flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onApply}

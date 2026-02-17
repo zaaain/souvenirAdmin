@@ -35,7 +35,7 @@ function SimpleTable({ headers, data, loading = false }: SimpleTableProps) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full border-collapse">
+      <table className="w-full min-w-[800px] border-collapse">
         <thead>
           <tr className="bg-gray-50">
             {headers.map((col) => (

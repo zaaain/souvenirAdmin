@@ -200,12 +200,12 @@ const LoginForm = () => {
               </label>
             )}
           />
-          <Link
+          {/* <Link
             to="/auth/forgot-password"
             className="text-sm text-primary font-Manrope"
           >
             Forget Password?
-          </Link>
+          </Link> */}
         </div>
 
         <Button 
@@ -228,7 +228,7 @@ const LoginForm = () => {
         </p>
       </div> */}
 
-      <div className="mt-4 flex justify-center space-x-4 text-sm">
+      {/* <div className="mt-4 flex justify-center space-x-4 text-sm">
         <Link to="/terms" className="text-primary font-Manrope">
           Terms of Service
         </Link>
@@ -236,7 +236,7 @@ const LoginForm = () => {
         <Link to="/privacy" className="text-primary font-Manrope">
           Privacy Policy
         </Link>
-      </div>
+      </div> */}
     </div>
   )
 }

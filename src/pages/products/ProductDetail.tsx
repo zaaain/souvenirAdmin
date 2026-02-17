@@ -27,7 +27,7 @@ interface ProductDetailData {
   images: string[]
 }
 
-const BASE_URL = 'http://18.130.102.234:9078'
+const BASE_URL = 'https://api.souvenir.live'
 
 function mapApiProductToDetail(raw: Record<string, unknown>): ProductDetailData {
   const name = String(raw.name ?? raw.productName ?? raw.title ?? '—')

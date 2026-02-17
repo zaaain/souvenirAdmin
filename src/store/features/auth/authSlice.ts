@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 // Custom baseQuery with error handling for unauthorized responses
 const baseQuery = fetchBaseQuery({ 
-  baseUrl: 'http://18.130.102.234:9078/api/',
+  baseUrl: 'https://api.souvenir.live/api/',
 })
 
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {

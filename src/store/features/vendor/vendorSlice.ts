@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { RootState } from '../../index'
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'http://18.130.102.234:9078/api/',
+  baseUrl: 'https://api.souvenir.live/api/',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token
     if (token) {

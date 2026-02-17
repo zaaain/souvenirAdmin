@@ -3,7 +3,7 @@ import type { RootState } from '../../index'
 
 // Custom baseQuery with error handling for unauthorized responses
 const baseQuery = fetchBaseQuery({ 
-  baseUrl: 'http://18.130.102.234:9078/api/',
+  baseUrl: 'https://api.souvenir.live/api/',
   prepareHeaders: (headers, { getState }) => {
     // Get token from Redux state
     const token = (getState() as RootState).auth.token
