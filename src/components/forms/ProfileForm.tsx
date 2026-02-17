@@ -15,13 +15,10 @@ interface ProfileFormData {
 const ProfileForm = () => {
   const profileData = useAppSelector(selectProfileData)
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     control,
-    handleSubmit,
     formState: { errors },
-    reset,
   } = useForm<ProfileFormData>({
     defaultValues: {
       fullName: profileData?.firstname && profileData?.lastname 
@@ -42,24 +39,6 @@ const ProfileForm = () => {
       }
       reader.readAsDataURL(file)
     }
-  }
-
-  const onSubmit = async (data: ProfileFormData) => {
-    setIsSubmitting(true)
-    try {
-      console.log('Profile data:', data)
-      // API integration will be added here
-      // await updateProfile(data)
-    } catch (error) {
-      console.error('Error updating profile:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleCancel = () => {
-    reset()
-    setProfilePicture(null)
   }
 
   return (
