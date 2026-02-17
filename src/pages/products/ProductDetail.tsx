@@ -24,10 +24,30 @@ interface ProductDetailData {
   general: VendorInfoCardItem[]
   pricing: VendorInfoCardItem[]
   shipping: VendorInfoCardItem[]
+  /** Full URL of the feature image; shown first with Feature tag */
+  featureImage: string | null
+  /** Other images (excluding feature image to avoid duplicate) */
   images: string[]
 }
 
 const BASE_URL = 'https://api.souvenir.live'
+
+function toFullUrl(path: string): string {
+  if (!path || typeof path !== 'string') return ''
+  const trimmed = path.trim()
+  if (trimmed.startsWith('http')) return trimmed
+  return `${BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`
+}
+
+function pathForCompare(url: string): string {
+  if (!url) return ''
+  try {
+    if (url.startsWith('http')) return new URL(url).pathname
+    return url.startsWith('/') ? url : `/${url}`
+  } catch {
+    return url
+  }
+}
 
 function mapApiProductToDetail(raw: Record<string, unknown>): ProductDetailData {
   const name = String(raw.name ?? raw.productName ?? raw.title ?? '—')
@@ -77,30 +97,35 @@ function mapApiProductToDetail(raw: Record<string, unknown>): ProductDetailData 
     { label: 'Dimensions [Height x Length x Width] (cm)', value: dimensions },
   ]
 
-  let images: string[] = []
+  let allImageUrls: string[] = []
   const imgField = raw.images
   if (Array.isArray(imgField)) {
-    images = imgField.flatMap((item: unknown) => {
+    allImageUrls = imgField.flatMap((item: unknown) => {
       if (typeof item === 'string') {
-        return item.split(',').map((s) => s.trim()).filter(Boolean)
+        return item.split(',').map((s) => toFullUrl(s)).filter(Boolean)
       }
-      if (item && typeof item === 'object' && 'url' in item) return [String((item as { url: string }).url)]
-      if (item && typeof item === 'object' && 'image' in item) return [String((item as { image: string }).image)]
+      if (item && typeof item === 'object' && 'url' in item) return [toFullUrl(String((item as { url: string }).url))]
+      if (item && typeof item === 'object' && 'image' in item) return [toFullUrl(String((item as { image: string }).image))]
       return []
     }).filter(Boolean)
   } else if (typeof imgField === 'string') {
-    images = imgField.split(',').map((s) => s.trim()).filter(Boolean)
+    allImageUrls = imgField.split(',').map((s) => toFullUrl(s)).filter(Boolean)
   }
-  const featureImage = raw.featureImage ? String(raw.featureImage) : ''
-  if (featureImage) {
-    const fullUrl = featureImage.startsWith('http') ? featureImage : `${BASE_URL}${featureImage.startsWith('/') ? '' : '/'}${featureImage}`
-    if (!images.includes(fullUrl)) images = [fullUrl, ...images]
+  const featureImageRaw = raw.featureImage ? String(raw.featureImage).trim() : ''
+  const featureImageUrl = featureImageRaw ? toFullUrl(featureImageRaw) : null
+  const featurePath = featureImageUrl ? pathForCompare(featureImageUrl) : ''
+  const otherImages = featurePath
+    ? allImageUrls.filter((url) => pathForCompare(url) !== featurePath)
+    : allImageUrls
+  if (raw.imageUrl && typeof raw.imageUrl === 'string') {
+    const u = toFullUrl(raw.imageUrl)
+    if (u && !otherImages.includes(u) && pathForCompare(u) !== featurePath) otherImages.push(u)
   }
-  if (raw.imageUrl && typeof raw.imageUrl === 'string') images = [raw.imageUrl, ...images]
-  if (raw.thumbnail && typeof raw.thumbnail === 'string') images = [raw.thumbnail, ...images]
-  if (images.length === 0) {
-    images = ['https://picsum.photos/seed/product/240/240']
+  if (raw.thumbnail && typeof raw.thumbnail === 'string') {
+    const u = toFullUrl(raw.thumbnail)
+    if (u && !otherImages.includes(u) && pathForCompare(u) !== featurePath) otherImages.push(u)
   }
+  const images = otherImages.length > 0 ? otherImages : (featureImageUrl ? [] : ['https://picsum.photos/seed/product/240/240'])
 
   return {
     productName: name,
@@ -108,6 +133,7 @@ function mapApiProductToDetail(raw: Record<string, unknown>): ProductDetailData 
     general,
     pricing,
     shipping,
+    featureImage: featureImageUrl,
     images,
   }
 }
@@ -292,6 +318,14 @@ const ProductDetail = () => {
         <h3 className="text-base font-ManropeBold text-gray-800 mb-2">Product Images</h3>
         <div className="border-b border-gray-200 mb-4" />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {detail.featureImage && (
+            <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+              <img src={detail.featureImage} alt="Feature" className="w-full h-full object-cover" />
+              <span className="absolute top-2 left-2 px-2 py-1 rounded bg-primary text-white text-xs font-ManropeBold">
+                Feature
+              </span>
+            </div>
+          )}
           {detail.images.map((src, i) => (
             <div key={i} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
               <img src={src} alt="" className="w-full h-full object-cover" />

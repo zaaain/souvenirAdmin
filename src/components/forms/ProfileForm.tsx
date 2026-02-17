@@ -68,13 +68,14 @@ const ProfileForm = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2 font-ManropeBold">
-            Edit Profile
+            Profile
           </h1>
           <p className="text-gray-600 font-Manrope">
-            Update your profile information
+            Profile information
           </p>
         </div>
-        <div className="flex gap-3">
+        {/* Cancel and Save Changes buttons - commented out */}
+        {/* <div className="flex gap-3">
           <Button
             type="button"
             variant="outline"
@@ -93,7 +94,7 @@ const ProfileForm = () => {
           >
             Save Changes
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Personal Information Card */}
@@ -181,7 +182,7 @@ const ProfileForm = () => {
 
         {/* Form Fields - Two Column Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Full Name */}
+          {/* Full Name - disabled */}
           <Controller
             name="fullName"
             control={control}
@@ -195,11 +196,12 @@ const ProfileForm = () => {
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 error={errors.fullName?.message}
+                disabled
               />
             )}
           />
 
-          {/* Email */}
+          {/* Email - disabled */}
           <Controller
             name="email"
             control={control}
@@ -219,12 +221,13 @@ const ProfileForm = () => {
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 error={errors.email?.message}
+                disabled
               />
             )}
           />
 
-          {/* Phone */}
-          <Controller
+          {/* Phone - commented out */}
+          {/* <Controller
             name="phone"
             control={control}
             rules={{ required: 'Phone is required' }}
@@ -239,10 +242,10 @@ const ProfileForm = () => {
                 error={errors.phone?.message}
               />
             )}
-          />
+          /> */}
 
-          {/* Address */}
-          <Controller
+          {/* Address - commented out */}
+          {/* <Controller
             name="address"
             control={control}
             rules={{ required: 'Address is required' }}
@@ -257,7 +260,7 @@ const ProfileForm = () => {
                 error={errors.address?.message}
               />
             )}
-          />
+          /> */}
         </div>
       </div>
     </div>

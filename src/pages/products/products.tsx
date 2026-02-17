@@ -179,7 +179,7 @@ const Products = () => {
     setDateAdded('')
     setPage(1)
   }
-  const handleExport = () => console.log('Export')
+  // const handleExport = () => console.log('Export')
 
   return (
     <div className="space-y-6">
@@ -188,7 +188,8 @@ const Products = () => {
           <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">Products Portfolio</h1>
           <p className="text-gray-500 font-Manrope mt-1">Manage and approve products</p>
         </div>
-        <button
+        {/* Export button - commented out */}
+        {/* <button
           type="button"
           onClick={handleExport}
           className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary text-sm font-Manrope hover:bg-primary/5 transition-colors"
@@ -197,7 +198,7 @@ const Products = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
           Export
-        </button>
+        </button> */}
       </div>
 
       <Filter

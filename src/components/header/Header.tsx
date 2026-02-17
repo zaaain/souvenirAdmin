@@ -36,10 +36,11 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     setShowProfileDropdown(false)
   }
 
-  const handleSettingsClick = () => {
-    navigate('/settings')
-    setShowProfileDropdown(false)
-  }
+  // Settings - removed from dropdown
+  // const handleSettingsClick = () => {
+  //   navigate('/settings')
+  //   setShowProfileDropdown(false)
+  // }
 
   const onLogout = () => {
     handleLogout()
@@ -149,12 +150,13 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 >
                   {t('header.profile')}
                 </button>
-                <button 
+                {/* Settings - removed from dropdown */}
+                {/* <button 
                   onClick={handleSettingsClick}
                   className="w-full px-4 py-2 text-left text-sm font-Manrope text-gray-700 hover:bg-gray-50"
                 >
                   {t('header.settings')}
-                </button>
+                </button> */}
                 <button 
                   onClick={onLogout}
                   className="w-full px-4 py-2 text-left text-sm font-Manrope text-red-600 hover:bg-gray-50"

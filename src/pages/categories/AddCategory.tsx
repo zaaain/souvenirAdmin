@@ -41,7 +41,7 @@ const AddCategory = () => {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">Add Category</h1>
-          <p className="text-gray-500 font-Manrope mt-1">Add a new category</p>
+          <p className="text-gray-500 font-Manrope mt-1">Create a new category</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -60,7 +60,7 @@ const AddCategory = () => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            {isLoading ? 'Adding...' : 'Add Category'}
+            {isLoading ? 'Creating...' : 'Create Category'}
           </button>
         </div>
       </div>

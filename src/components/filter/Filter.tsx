@@ -10,8 +10,10 @@ export interface FilterProps {
   statusValue: string
   onStatusChange: (v: string) => void
   statusOptions: SelectOption[]
-  dateValue: string
-  onDateChange: (v: string) => void
+  /** When false, date input is hidden and status field carries its width */
+  showDate?: boolean
+  dateValue?: string
+  onDateChange?: (v: string) => void
   dateLabel?: string
   datePlaceholder?: string
   onApply: () => void
@@ -25,7 +27,8 @@ function Filter({
   statusValue,
   onStatusChange,
   statusOptions,
-  dateValue,
+  showDate = true,
+  dateValue = '',
   onDateChange,
   dateLabel = 'Date Joined',
   datePlaceholder = 'Select Date',
@@ -43,7 +46,7 @@ function Filter({
             placeholder={searchPlaceholder}
           />
         </div>
-        <div className="w-full lg:w-40">
+        <div className={showDate ? 'w-full lg:w-40' : 'w-full lg:w-52'}>
           <Select
             label="Status"
             value={statusValue}
@@ -53,14 +56,16 @@ function Filter({
             rounded="lg"
           />
         </div>
-        <div className="w-full lg:w-44">
-          <DateInput
-            label={dateLabel}
-            value={dateValue}
-            onChange={onDateChange}
-            placeholder={datePlaceholder}
-          />
-        </div>
+        {showDate && (
+          <div className="w-full lg:w-44">
+            <DateInput
+              label={dateLabel}
+              value={dateValue}
+              onChange={onDateChange ?? (() => {})}
+              placeholder={datePlaceholder}
+            />
+          </div>
+        )}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"

@@ -17,7 +17,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseClasses = 'h-[56px] rounded-lg font-semibold transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
+  const baseClasses = 'h-[56px] px-2 rounded-lg font-semibold transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
   
   const variantClasses = {
     primary: 'bg-primary hover:bg-blue-700 text-white font-ManropeBold',
