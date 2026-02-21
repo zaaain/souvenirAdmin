@@ -1,69 +1,63 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { TailSpin } from 'react-loader-spinner'
 import { VendorInfoCard } from '@components/card'
 import type { VendorInfoCardItem } from '@components/card'
 import { Modal } from '@components/modal'
+import {
+  useGetSubadminByIdQuery,
+  useUpdateSubadminStatusMutation,
+  useDeleteSubadminMutation,
+} from '@store/features/team'
+import { eSnack, sSnack } from '@hooks/useToast'
 
 const STATUS_PILL: Record<string, string> = {
+  active: 'bg-primary text-white',
   Active: 'bg-primary text-white',
+  suspended: 'bg-gray-100 text-gray-600',
   Suspended: 'bg-gray-100 text-gray-600',
+  inactive: 'bg-gray-100 text-gray-600',
+  Inactive: 'bg-gray-100 text-gray-600',
 }
 
-const MOCK_ADMINS: Record<string, unknown>[] = [
-  { adminId: 't-001', fullName: 'John Bushmill', email: 'aramirez@skyhigh.com', status: 'Active' },
-  { adminId: 't-002', fullName: 'Josh Adam', email: 'josh@company.com', status: 'Active' },
-  { adminId: 't-003', fullName: 'Sarah Johnson', email: 'sarah.johnson@email.com', status: 'Active' },
-  { adminId: 't-004', fullName: 'Michael Chen', email: 'mchen@admin.com', status: 'Suspended' },
-  { adminId: 't-005', fullName: 'Emma Wilson', email: 'emma.w@team.com', status: 'Active' },
-  { adminId: 't-006', fullName: 'David Lee', email: 'david.lee@mail.com', status: 'Active' },
-]
-
-interface TeamDetailData {
-  fullName: string
-  email: string
-  status: string
-  personal: VendorInfoCardItem[]
-}
-
-const MOCK_DETAIL: Record<string, TeamDetailData> = {
-  't-003': {
-    fullName: 'Sarah Johnson',
-    email: 'sarah.johnson@email.com',
-    status: 'Active',
-    personal: [
-      { label: 'User ID', value: 'LD-2025-001' },
-      { label: 'Phone', value: '+1 (555) 123-4567' },
-      { label: 'Member Since', value: 'March 15, 2023' },
-    ],
-  },
-}
-
-function getTeamDetail(id: string): TeamDetailData | null {
-  if (MOCK_DETAIL[id]) return MOCK_DETAIL[id]
-  const fromList = MOCK_ADMINS.find((v) => String(v.adminId) === id) as Record<string, unknown> | undefined
-  if (!fromList) return null
-  return {
-    fullName: String(fromList.fullName ?? '—'),
-    email: String(fromList.email ?? '—'),
-    status: String(fromList.status ?? '—'),
-    personal: [
-      { label: 'User ID', value: '—' },
-      { label: 'Phone', value: String(fromList.phone ?? '—') },
-      { label: 'Member Since', value: '—' },
-    ],
-  }
+function buildPersonalItems(raw: Record<string, unknown>): VendorInfoCardItem[] {
+  const id = String(raw._id ?? raw.id ?? '')
+  const role = String(raw.role ?? raw.roleName ?? raw.roleType ?? '—').trim() || '—'
+  const createdAt = raw.createdAt ?? raw.created_at ?? raw.dateAdded
+  const memberSince =
+    typeof createdAt === 'string'
+      ? new Date(createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : '—'
+  return [
+    { label: 'User ID', value: id || '—' },
+    { label: 'Role', value: role },
+    { label: 'Member Since', value: memberSince },
+  ]
 }
 
 const TeamDetail = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [suspendModalOpen, setSuspendModalOpen] = useState(false)
   const [reactivateModalOpen, setReactivateModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const detail = id ? getTeamDetail(id) : null
-  const isActive = detail?.status === 'Active'
-  const isSuspended = detail?.status === 'Suspended'
 
-  if (!id || !detail) {
+  const { data: apiResponse, isLoading, isError } = useGetSubadminByIdQuery(id!, { skip: !id })
+  const [updateStatus, { isLoading: isStatusLoading }] = useUpdateSubadminStatusMutation()
+  const [deleteSubadmin, { isLoading: isDeleteLoading }] = useDeleteSubadminMutation()
+
+  const raw = apiResponse?.data as Record<string, unknown> | undefined
+  const firstname = String(raw?.firstname ?? '').trim()
+  const lastname = String(raw?.lastname ?? '').trim()
+  const fullName = [firstname, lastname].filter(Boolean).join(' ') || '—'
+  const email = String(raw?.email ?? '—')
+  const status = String(raw?.status ?? (raw?.isActive === true ? 'active' : raw?.isActive === false ? 'suspended' : 'active'))
+  const personal = raw ? buildPersonalItems(raw) : []
+
+  const isActive = status.toLowerCase() === 'active'
+  const isSuspended = status.toLowerCase() === 'suspended'
+
+  if (!id) {
     return (
       <div className="space-y-4">
         <Link to="/team" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
@@ -77,8 +71,73 @@ const TeamDetail = () => {
     )
   }
 
-  const statusClass = STATUS_PILL[detail.status] ?? 'bg-gray-100 text-gray-600'
-  const initial = detail.fullName ? detail.fullName.charAt(0).toUpperCase() : '—'
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <TailSpin visible height={60} width={60} color="#2466D0" ariaLabel="Loading team member" />
+      </div>
+    )
+  }
+
+  if (isError || !raw) {
+    return (
+      <div className="space-y-4">
+        <Link to="/team" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Team
+        </Link>
+        <p className="text-gray-600">Admin not found.</p>
+      </div>
+    )
+  }
+
+  const statusClass = STATUS_PILL[status] ?? 'bg-gray-100 text-gray-600'
+  const initial = fullName !== '—' ? fullName.charAt(0).toUpperCase() : '—'
+
+  const handleSuspend = async () => {
+    try {
+      await updateStatus({ id, body: { action: 'deactivate' } }).unwrap()
+      sSnack('User set to inactive.')
+      setSuspendModalOpen(false)
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'data' in err && err.data && typeof (err.data as { message?: string }).message === 'string'
+          ? (err.data as { message: string }).message
+          : 'Failed to suspend user.'
+      eSnack(message)
+    }
+  }
+
+  const handleReactivate = async () => {
+    try {
+      await updateStatus({ id, body: { action: 'activate' } }).unwrap()
+      sSnack('User reactivated.')
+      setReactivateModalOpen(false)
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'data' in err && err.data && typeof (err.data as { message?: string }).message === 'string'
+          ? (err.data as { message: string }).message
+          : 'Failed to reactivate user.'
+      eSnack(message)
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteSubadmin(id).unwrap()
+      sSnack('Subadmin deleted successfully.')
+      setDeleteModalOpen(false)
+      navigate('/team')
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'data' in err && err.data && typeof (err.data as { message?: string }).message === 'string'
+          ? (err.data as { message: string }).message
+          : 'Failed to delete subadmin.'
+      eSnack(message)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -98,17 +157,17 @@ const TeamDetail = () => {
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">{detail.fullName}</h1>
-              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope ${statusClass}`}>
-                {detail.status}
+              <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">{fullName}</h1>
+              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope capitalize ${statusClass}`}>
+                {status.toLowerCase() === 'suspended' ? 'Inactive' : status}
               </span>
             </div>
-            {detail.email && detail.email !== '—' && (
+            {email && email !== '—' && (
               <p className="inline-flex items-center gap-1.5 text-sm font-Manrope text-gray-600 mt-1">
                 <svg className="w-4 h-4 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                {detail.email}
+                {email}
               </p>
             )}
           </div>
@@ -116,8 +175,16 @@ const TeamDetail = () => {
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
           <button
             type="button"
+            onClick={() => navigate(`/team/${id}/edit`)}
+            className="px-4 py-2.5 rounded-lg border border-primary text-primary text-sm font-Manrope hover:bg-primary/5 transition-colors"
+          >
+            Update
+          </button>
+          <button
+            type="button"
             onClick={() => setDeleteModalOpen(true)}
-            className="p-2.5 rounded-lg border border-gray-200 text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors"
+            disabled={isDeleteLoading}
+            className="p-2.5 rounded-lg border border-gray-200 text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
             aria-label="Delete"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,16 +195,18 @@ const TeamDetail = () => {
             <button
               type="button"
               onClick={() => setSuspendModalOpen(true)}
-              className="px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-Manrope hover:bg-red-600 transition-colors"
+              disabled={isStatusLoading}
+              className="px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-Manrope hover:bg-red-600 transition-colors disabled:opacity-50"
             >
-              Suspend
+              Inactive
             </button>
           )}
           {isSuspended && (
             <button
               type="button"
               onClick={() => setReactivateModalOpen(true)}
-              className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-ManropeBold hover:bg-primary/90 transition-colors"
+              disabled={isStatusLoading}
+              className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-ManropeBold hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               Reactivate
             </button>
@@ -145,7 +214,7 @@ const TeamDetail = () => {
         </div>
       </div>
 
-      <VendorInfoCard heading="Personal Information" data={detail.personal} />
+      <VendorInfoCard heading="Personal Information" data={personal} />
 
       <Modal
         isOpen={suspendModalOpen}
@@ -155,7 +224,7 @@ const TeamDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setSuspendModalOpen(false), variant: 'secondary' },
-          { label: 'Inactivate User', onClick: () => { console.log('Suspend', id); setSuspendModalOpen(false); }, variant: 'danger' },
+          { label: 'Inactivate User', onClick: handleSuspend, variant: 'danger' },
         ]}
       />
 
@@ -167,7 +236,7 @@ const TeamDetail = () => {
         iconType="success"
         actions={[
           { label: 'Cancel', onClick: () => setReactivateModalOpen(false), variant: 'secondary' },
-          { label: 'Reactivate User', onClick: () => { console.log('Reactivate', id); setReactivateModalOpen(false); }, variant: 'primary' },
+          { label: 'Reactivate User', onClick: handleReactivate, variant: 'primary' },
         ]}
       />
 
@@ -179,7 +248,7 @@ const TeamDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setDeleteModalOpen(false), variant: 'secondary' },
-          { label: 'Delete User', onClick: () => { console.log('Delete', id); setDeleteModalOpen(false); }, variant: 'danger' },
+          { label: 'Delete User', onClick: handleDelete, variant: 'danger' },
         ]}
       />
     </div>

@@ -55,8 +55,50 @@ export const addCategorySchema = yup.object().shape({
     .default(''),
 })
 
+export const createAdminSchema = yup.object().shape({
+  firstname: yup
+    .string()
+    .trim()
+    .required('First name is required')
+    .min(2, 'First name must be at least 2 characters'),
+  lastname: yup
+    .string()
+    .trim()
+    .required('Last name is required')
+    .min(2, 'Last name must be at least 2 characters'),
+  email: yup
+    .string()
+    .trim()
+    .email('Invalid email address')
+    .required('Email is required'),
+  password: yup
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .required('Password is required'),
+})
+
+export const updateTeamMemberSchema = yup.object().shape({
+  firstname: yup
+    .string()
+    .trim()
+    .required('First name is required')
+    .min(2, 'First name must be at least 2 characters'),
+  lastname: yup
+    .string()
+    .trim()
+    .required('Last name is required')
+    .min(2, 'Last name must be at least 2 characters'),
+  email: yup
+    .string()
+    .trim()
+    .email('Invalid email address')
+    .required('Email is required'),
+})
+
 export type LoginFormData = yup.InferType<typeof loginSchema>
 export type RegisterFormData = yup.InferType<typeof registerSchema>
 export type ForgotPasswordFormData = yup.InferType<typeof forgotPasswordSchema>
 export type AddCategoryFormData = yup.InferType<typeof addCategorySchema>
+export type CreateAdminFormData = yup.InferType<typeof createAdminSchema>
+export type UpdateTeamMemberFormData = yup.InferType<typeof updateTeamMemberSchema>
 

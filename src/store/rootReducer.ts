@@ -5,6 +5,7 @@ import { dashboardSlice } from './features/dashboard'
 import { productSlice } from './features/product'
 import { profileSlice } from './features/profile/profileSlice'
 import { vendorSlice } from './features/vendor/vendorSlice'
+import { teamSlice } from './features/team/teamSlice'
 import authReducer from './features/auth/authReducer'
 
 const rootReducer = combineReducers({
@@ -14,6 +15,7 @@ const rootReducer = combineReducers({
   [productSlice.reducerPath]: productSlice.reducer,
   [profileSlice.reducerPath]: profileSlice.reducer,
   [vendorSlice.reducerPath]: vendorSlice.reducer,
+  [teamSlice.reducerPath]: teamSlice.reducer,
   auth: authReducer,
 })
 

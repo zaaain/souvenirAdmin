@@ -22,6 +22,7 @@ import EarningPayout from '@pages/earning-payout/earningPayout'
 import Team from '@pages/team/team'
 import TeamDetail from '@pages/team/TeamDetail'
 import AddAdmin from '@pages/team/AddAdmin'
+import EditTeamMember from '@pages/team/EditTeamMember'
 import NotFound from '@pages/404/NotFound'
 
 export const router = createBrowserRouter(
@@ -107,6 +108,10 @@ export const router = createBrowserRouter(
       {
         path: 'team/add',
         element: <AddAdmin />,
+      },
+      {
+        path: 'team/:id/edit',
+        element: <EditTeamMember />,
       },
       {
         path: 'team/:id',
