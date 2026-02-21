@@ -134,7 +134,7 @@ const Team = () => {
     status: status !== 'all' ? status : undefined,
     text: search.trim() || undefined,
   })
-  const [deleteSubadmin, { isLoading: isDeleteLoading }] = useDeleteSubadminMutation()
+  const [deleteSubadmin] = useDeleteSubadminMutation()
 
   const rawList = useMemo(() => {
     const d = apiResponse?.data
