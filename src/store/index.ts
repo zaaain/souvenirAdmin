@@ -8,6 +8,7 @@ import { productSlice } from './features/product'
 import { profileSlice } from './features/profile/profileSlice'
 import { vendorSlice } from './features/vendor/vendorSlice'
 import { teamSlice } from './features/team/teamSlice'
+import { userSlice } from './features/user/userSlice'
 import rootReducer from './rootReducer'
 
 const persistConfig = {
@@ -25,7 +26,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }).concat(authSlice.middleware, categorySlice.middleware, dashboardSlice.middleware, productSlice.middleware, profileSlice.middleware, vendorSlice.middleware, teamSlice.middleware),
+    }).concat(authSlice.middleware, categorySlice.middleware, dashboardSlice.middleware, productSlice.middleware, profileSlice.middleware, vendorSlice.middleware, teamSlice.middleware, userSlice.middleware),
 })
 
 export const persistor = persistStore(store)

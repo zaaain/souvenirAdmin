@@ -4,15 +4,19 @@ import { Filter } from '@components/filter'
 import { Modal } from '@components/modal'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
+import { useGetUsersQuery, useDeleteUserMutation } from '@store/features/user'
+import { eSnack, sSnack } from '@hooks/useToast'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'Active', label: 'Active' },
-  { value: 'Inactive', label: 'Inactive' },
+  { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Inactive' },
 ]
 
 const STATUS_PILL: Record<string, string> = {
+  active: 'bg-primary text-white',
   Active: 'bg-primary text-white',
+  suspended: 'bg-gray-100 text-gray-600',
   Inactive: 'bg-gray-100 text-gray-600',
 }
 
@@ -26,30 +30,43 @@ function UserIcon() {
   )
 }
 
-const MOCK_USERS: Record<string, unknown>[] = [
-  { userId: '2025-001', fullName: 'Sarah Johnson', email: 'AkachiOkoro@gmail.com', phone: '+1 415 555 0123', totalOrders: 12, lastOrder: 'Jan 15, 2025', lastOrderRaw: '2025-01-15', status: 'Active' },
-  { userId: '2025-002', fullName: 'Michael Chen', email: 'RicardoEstevan@gmail.com', phone: '+1 415 555 0123', totalOrders: 3, lastOrder: 'Jan 15, 2025', lastOrderRaw: '2025-01-15', status: 'Active' },
-  { userId: '2025-003', fullName: 'Emma Rodriguez', email: 'DeepaSingh@gmail.com', phone: '+1 415 555 0123', totalOrders: 42, lastOrder: 'Jan 15, 2025', lastOrderRaw: '2025-01-15', status: 'Active' },
-  { userId: '2025-004', fullName: 'David Thompson', email: 'KenjiTanaka@gmail.com', phone: '+1 415 555 0123', totalOrders: 42, lastOrder: 'Jan 15, 2025', lastOrderRaw: '2025-01-15', status: 'Inactive' },
-  { userId: '2025-005', fullName: 'Lisa Anderson', email: 'LiesTorres@gmail.com', phone: '+1 415 555 0123', totalOrders: 12, lastOrder: 'Jan 15, 2025', lastOrderRaw: '2025-01-15', status: 'Inactive' },
-  { userId: '2025-006', fullName: 'Lisa Anderson', email: 'RicardoEstevan@gmail.com', phone: '+1 415 555 0123', totalOrders: 32, lastOrder: 'Jan 15, 2025', lastOrderRaw: '2025-01-15', status: 'Inactive' },
-  { userId: '2025-007', fullName: 'James Wilson', email: 'james.w@example.com', phone: '+1 415 555 0124', totalOrders: 8, lastOrder: 'Jan 14, 2025', lastOrderRaw: '2025-01-14', status: 'Active' },
-  { userId: '2025-008', fullName: 'Maria Garcia', email: 'maria.g@example.com', phone: '+1 415 555 0125', totalOrders: 25, lastOrder: 'Jan 13, 2025', lastOrderRaw: '2025-01-13', status: 'Active' },
-  { userId: '2025-009', fullName: 'Robert Brown', email: 'robert.b@example.com', phone: '+1 415 555 0126', totalOrders: 5, lastOrder: 'Jan 12, 2025', lastOrderRaw: '2025-01-12', status: 'Inactive' },
-  { userId: '2025-010', fullName: 'Jennifer Lee', email: 'jennifer.lee@example.com', phone: '+1 415 555 0127', totalOrders: 19, lastOrder: 'Jan 11, 2025', lastOrderRaw: '2025-01-11', status: 'Active' },
-  { userId: '2025-011', fullName: 'Christopher Davis', email: 'chris.d@example.com', phone: '+1 415 555 0128', totalOrders: 7, lastOrder: 'Jan 10, 2025', lastOrderRaw: '2025-01-10', status: 'Inactive' },
-  { userId: '2025-012', fullName: 'Amanda White', email: 'amanda.w@example.com', phone: '+1 415 555 0129', totalOrders: 31, lastOrder: 'Jan 9, 2025', lastOrderRaw: '2025-01-09', status: 'Active' },
-  { userId: '2025-013', fullName: 'Daniel Martinez', email: 'daniel.m@example.com', phone: '+1 415 555 0130', totalOrders: 4, lastOrder: 'Jan 8, 2025', lastOrderRaw: '2025-01-08', status: 'Inactive' },
-  { userId: '2025-014', fullName: 'Jessica Taylor', email: 'jessica.t@example.com', phone: '+1 415 555 0131', totalOrders: 18, lastOrder: 'Jan 7, 2025', lastOrderRaw: '2025-01-07', status: 'Active' },
-  { userId: '2025-015', fullName: 'Kevin Robinson', email: 'kevin.r@example.com', phone: '+1 415 555 0132', totalOrders: 9, lastOrder: 'Jan 6, 2025', lastOrderRaw: '2025-01-06', status: 'Inactive' },
-]
+const DEFAULT_PAGE = 1
+const DEFAULT_PAGE_SIZE = 10
 
-const ITEMS_PER_PAGE = 10
+/** Map API user item to table row shape */
+function mapUserToRow(raw: Record<string, unknown>): Record<string, unknown> {
+  const id = String(raw._id ?? raw.id ?? raw.userId ?? '')
+  const fullName =
+    String(raw.fullName ?? '').trim() ||
+    [raw.firstname, raw.lastname].filter(Boolean).join(' ').trim() ||
+    '—'
+  const email = String(raw.email ?? '')
+  const phone = String(raw.phone ?? raw.phoneNumber ?? '')
+  const totalOrders = raw.totalOrders ?? raw.orderCount ?? raw.ordersCount ?? 0
+  const lastOrderRaw = raw.lastOrder ?? raw.lastOrderDate ?? raw.updatedAt ?? ''
+  const lastOrder = typeof lastOrderRaw === 'string' && lastOrderRaw.length >= 10
+    ? new Date(lastOrderRaw).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })
+    : '—'
+  // Base status on isActive: true → Active, false → Inactive (also treat status blocked/suspended as Inactive)
+  const inactiveStatuses = ['blocked', 'suspended', 'inactive']
+  const statusFromField = String(raw.status ?? '').toLowerCase()
+  const isInactive = raw.isActive === false || inactiveStatuses.includes(statusFromField)
+  const statusLabel = isInactive ? 'Inactive' : 'Active'
+  return {
+    userId: id,
+    fullName,
+    email,
+    phone,
+    totalOrders,
+    lastOrder,
+    lastOrderRaw: typeof lastOrderRaw === 'string' ? lastOrderRaw.slice(0, 10) : '',
+    status: statusLabel,
+  }
+}
 
 function buildColumns(onView: (id: string) => void, onDelete: (id: string) => void): TableColumn[] {
   return [
     { key: 'rowNum', label: '#' },
-    { key: 'userId', label: 'User ID' },
     {
       key: 'fullName',
       label: 'Full Name',
@@ -60,7 +77,6 @@ function buildColumns(onView: (id: string) => void, onDelete: (id: string) => vo
         </span>
       ),
     },
-    { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone Number' },
     { key: 'totalOrders', label: 'Total Orders' },
     { key: 'lastOrder', label: 'Last Order' },
@@ -112,35 +128,45 @@ const Users = () => {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
-  const [lastOrderOn, setLastOrderOn] = useState('')
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(DEFAULT_PAGE)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
 
-  const filtered = useMemo(() => {
-    let list = [...MOCK_USERS]
-    if (status !== 'all') list = list.filter((r) => r.status === status)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        (r) =>
-          String(r.fullName).toLowerCase().includes(q) ||
-          String(r.email).toLowerCase().includes(q) ||
-          String(r.phone).toLowerCase().includes(q)
-      )
-    }
-    if (lastOrderOn) {
-      list = list.filter((r) => String(r.lastOrderRaw ?? '') === lastOrderOn)
-    }
-    return list
-  }, [search, status, lastOrderOn])
+  // Filter by isActive: Active → isActive=true, Inactive → isActive=false (backend filters by isActive)
+  const isActiveFilter = status === 'all' ? undefined : status === 'suspended' ? false : true
+  const { data: apiResponse, isLoading } = useGetUsersQuery({
+    page,
+    pageSize,
+    isActive: isActiveFilter,
+    text: search.trim() || undefined,
+  })
+  const [deleteUser, { isLoading: isDeleteLoading }] = useDeleteUserMutation()
 
-  const total = filtered.length
-  const start = (page - 1) * ITEMS_PER_PAGE
-  const sliced = filtered.slice(start, start + ITEMS_PER_PAGE).map((r, i) => ({
-    ...r,
-    rowNum: start + i + 1,
-  }))
+  const rawList = useMemo(() => {
+    const d = apiResponse?.data
+    if (!d) return []
+    if (Array.isArray(d)) return d as Record<string, unknown>[]
+    const obj = d as Record<string, unknown>
+    if (Array.isArray(obj.users)) return obj.users as Record<string, unknown>[]
+    if (Array.isArray(obj.content)) return obj.content as Record<string, unknown>[]
+    if (Array.isArray(obj.data)) return obj.data as Record<string, unknown>[]
+    return []
+  }, [apiResponse])
+
+  const totalFromApi = useMemo(() => {
+    const d = apiResponse?.data as Record<string, unknown> | undefined
+    if (!d || Array.isArray(d)) return rawList.length
+    const t = (d.totalUsers as number) ?? (d.total as number) ?? (d.totalCount as number) ?? rawList.length
+    return Number(t) || rawList.length
+  }, [apiResponse, rawList.length])
+
+  const mappedList = useMemo(() => rawList.map(mapUserToRow), [rawList])
+  const total = totalFromApi
+  const tableData = useMemo(
+    () => mappedList.map((r, i) => ({ ...r, rowNum: (page - 1) * pageSize + i + 1 })),
+    [mappedList, page, pageSize]
+  )
 
   const columns = useMemo(
     () =>
@@ -158,10 +184,26 @@ const Users = () => {
   const handleClearAll = () => {
     setSearch('')
     setStatus('all')
-    setLastOrderOn('')
+    setPage(1)
+  }
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
     setPage(1)
   }
   const handleExport = () => console.log('Export')
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return
+    try {
+      const result = await deleteUser(deleteUserId).unwrap()
+      sSnack(result?.message ?? 'User deleted successfully')
+      setDeleteModalOpen(false)
+      setDeleteUserId(null)
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to delete user'
+      eSnack(msg)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -170,7 +212,7 @@ const Users = () => {
           <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">Users Management</h1>
           <p className="text-gray-500 font-Manrope mt-1">Manage users</p>
         </div>
-        <button
+        {/* <button
           type="button"
           onClick={handleExport}
           className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary text-sm font-Manrope hover:bg-primary/5 transition-colors"
@@ -179,7 +221,7 @@ const Users = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
           Export
-        </button>
+        </button> */}
       </div>
 
       <Filter
@@ -189,21 +231,20 @@ const Users = () => {
         statusValue={status}
         onStatusChange={setStatus}
         statusOptions={STATUS_OPTIONS}
-        dateValue={lastOrderOn}
-        onDateChange={setLastOrderOn}
-        dateLabel="Last Order On"
-        datePlaceholder="Select Date"
+        showDate={false}
         onApply={handleApply}
         onClearAll={handleClearAll}
       />
 
       <PaginateTable
         headers={columns}
-        data={sliced}
+        data={tableData}
         currentPage={page}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={pageSize}
         totalResults={total}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+        loading={isLoading}
       />
 
       <Modal
@@ -214,7 +255,7 @@ const Users = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => { setDeleteModalOpen(false); setDeleteUserId(null) }, variant: 'secondary' },
-          { label: 'Delete User', onClick: () => { console.log('Delete', deleteUserId); setDeleteModalOpen(false); setDeleteUserId(null) }, variant: 'danger' },
+          { label: 'Delete User', onClick: handleDeleteUser, variant: 'danger', disabled: isDeleteLoading },
         ]}
       />
     </div>

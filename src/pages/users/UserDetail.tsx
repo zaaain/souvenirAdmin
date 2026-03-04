@@ -1,91 +1,150 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useState, useMemo } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { TailSpin } from 'react-loader-spinner'
 import { VendorInfoCard } from '@components/card'
 import type { VendorInfoCardItem } from '@components/card'
 import { Modal } from '@components/modal'
+import { useGetUserByIdQuery, useUpdateUserStatusMutation, useDeleteUserMutation } from '@store/features/user'
+import { eSnack, sSnack } from '@hooks/useToast'
+
+const NA = '—'
 
 const STATUS_PILL: Record<string, string> = {
   Active: 'bg-primary text-white',
   Inactive: 'bg-gray-100 text-gray-600',
+  active: 'bg-primary text-white',
+  suspended: 'bg-gray-100 text-gray-600',
 }
-
-const MOCK_USERS: Record<string, unknown>[] = [
-  { userId: '2025-001', fullName: 'Sarah Johnson', email: 'AkachiOkoro@gmail.com', phone: '+1 415 555 0123', status: 'Active' },
-  { userId: '2025-002', fullName: 'Michael Chen', email: 'RicardoEstevan@gmail.com', phone: '+1 415 555 0123', status: 'Active' },
-  { userId: '2025-003', fullName: 'Emma Rodriguez', email: 'DeepaSingh@gmail.com', phone: '+1 415 555 0123', status: 'Active' },
-  { userId: '2025-004', fullName: 'David Thompson', email: 'KenjiTanaka@gmail.com', phone: '+1 415 555 0123', status: 'Inactive' },
-  { userId: '2025-005', fullName: 'Lisa Anderson', email: 'LiesTorres@gmail.com', phone: '+1 415 555 0123', status: 'Inactive' },
-  { userId: '2025-006', fullName: 'Lisa Anderson', email: 'RicardoEstevan@gmail.com', phone: '+1 415 555 0123', status: 'Inactive' },
-  { userId: '2025-007', fullName: 'James Wilson', email: 'james.w@example.com', phone: '+1 415 555 0124', status: 'Active' },
-  { userId: '2025-008', fullName: 'Maria Garcia', email: 'maria.g@example.com', phone: '+1 415 555 0125', status: 'Active' },
-  { userId: '2025-009', fullName: 'Robert Brown', email: 'robert.b@example.com', phone: '+1 415 555 0126', status: 'Inactive' },
-  { userId: '2025-010', fullName: 'Jennifer Lee', email: 'jennifer.lee@example.com', phone: '+1 415 555 0127', status: 'Active' },
-  { userId: '2025-011', fullName: 'Christopher Davis', email: 'chris.d@example.com', phone: '+1 415 555 0128', status: 'Inactive' },
-  { userId: '2025-012', fullName: 'Amanda White', email: 'amanda.w@example.com', phone: '+1 415 555 0129', status: 'Active' },
-  { userId: '2025-013', fullName: 'Daniel Martinez', email: 'daniel.m@example.com', phone: '+1 415 555 0130', status: 'Inactive' },
-  { userId: '2025-014', fullName: 'Jessica Taylor', email: 'jessica.t@example.com', phone: '+1 415 555 0131', status: 'Active' },
-  { userId: '2025-015', fullName: 'Kevin Robinson', email: 'kevin.r@example.com', phone: '+1 415 555 0132', status: 'Inactive' },
-]
 
 interface UserDetailData {
   fullName: string
   email: string
   status: string
+  statusApi: 'active' | 'suspended'
   business: VendorInfoCardItem[]
   creditCard: VendorInfoCardItem[]
 }
 
-const MOCK_DETAIL: Record<string, UserDetailData> = {
-  '2025-001': {
-    fullName: 'Sarah Johnson',
-    email: 'sarah.johnson@email.com',
-    status: 'Active',
-    business: [
-      { label: 'User ID', value: 'LD-2025-001' },
-      { label: 'Phone', value: '+1 (555) 123-4567' },
-      { label: 'Member Since', value: 'March 15, 2023' },
-      { label: 'Business Address', value: '1234 Market Street, Suite 500, San Francisco, CA 94103', colSpan: 3 },
-    ],
-    creditCard: [
-      { label: 'Card Holder Name', value: 'Sarah Johnson' },
-      { label: 'Card Number', value: '**** **** **** 1234' },
-      { label: 'Card Type', value: 'VISA' },
-    ],
-  },
-}
-
-function getUserDetail(id: string): UserDetailData | null {
-  if (MOCK_DETAIL[id]) return MOCK_DETAIL[id]
-  const fromList = MOCK_USERS.find((v) => String(v.userId) === id) as Record<string, unknown> | undefined
-  if (!fromList) return null
+function mapApiUserToDetail(raw: Record<string, unknown>): UserDetailData {
+  const id = String(raw._id ?? raw.id ?? '')
+  const fullName =
+    String(raw.fullName ?? '').trim() ||
+    [raw.firstname, raw.lastname].filter(Boolean).join(' ').trim() ||
+    NA
+  const email = raw.email != null && raw.email !== '' ? String(raw.email) : NA
+  // Prefer isActive: when false → show Inactive + Activate button; when true → Active + Inactivate button
+  const inactiveStatuses = ['blocked', 'suspended', 'inactive']
+  const statusFromField = String(raw.status ?? '').toLowerCase()
+  const isInactiveFromApi = raw.isActive === false || inactiveStatuses.includes(statusFromField)
+  const statusApi = isInactiveFromApi ? 'suspended' : 'active'
+  const status = statusApi === 'suspended' ? 'Inactive' : 'Active'
+  const phone = raw.phone != null && raw.phone !== '' ? String(raw.phone) : NA
+  const memberSince = raw.createdAt ?? raw.memberSince ?? raw.dateJoined ?? ''
+  const memberSinceFormatted = typeof memberSince === 'string' && memberSince.length >= 10
+    ? new Date(memberSince).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : NA
+  const address = raw.address ?? raw.businessAddress ?? raw.billingAddress ?? NA
   return {
-    fullName: String(fromList.fullName ?? '—'),
-    email: String(fromList.email ?? '—'),
-    status: String(fromList.status ?? '—'),
+    fullName,
+    email,
+    status,
+    statusApi,
     business: [
-      { label: 'User ID', value: String(fromList.userId ?? '—') },
-      { label: 'Phone', value: String(fromList.phone ?? '—') },
-      { label: 'Member Since', value: '—' },
-      { label: 'Business Address', value: '—', colSpan: 3 },
+      { label: 'User ID', value: id || NA },
+      { label: 'Phone', value: phone },
+      { label: 'Member Since', value: memberSinceFormatted },
+      { label: 'Business Address', value: address !== NA ? String(address) : NA, colSpan: 3 },
     ],
     creditCard: [
-      { label: 'Card Holder Name', value: '—' },
-      { label: 'Card Number', value: '—' },
-      { label: 'Card Type', value: '—' },
+      { label: 'Card Holder Name', value: raw.cardHolderName != null ? String(raw.cardHolderName) : NA },
+      { label: 'Card Number', value: raw.cardNumber != null ? String(raw.cardNumber) : NA },
+      { label: 'Card Type', value: raw.cardType != null ? String(raw.cardType) : NA },
     ],
   }
 }
 
 const UserDetail = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [inactivateModalOpen, setInactivateModalOpen] = useState(false)
   const [activateModalOpen, setActivateModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const detail = id ? getUserDetail(id) : null
-  const isActive = detail?.status === 'Active'
-  const isInactive = detail?.status === 'Inactive'
+  const [suspendReason, setSuspendReason] = useState('')
 
-  if (!id || !detail) {
+  const { data: apiResponse, isLoading, isError } = useGetUserByIdQuery(id!, { skip: !id })
+  const [updateStatus, { isLoading: isStatusLoading }] = useUpdateUserStatusMutation()
+  const [deleteUser, { isLoading: isDeleteLoading }] = useDeleteUserMutation()
+
+  const detail = useMemo(() => {
+    if (!apiResponse?.data) return null
+    const raw = apiResponse.data as Record<string, unknown>
+    return mapApiUserToDetail(raw)
+  }, [apiResponse])
+
+  const isActive = detail?.status === 'Active' || detail?.statusApi === 'active'
+  const isInactive = detail?.status === 'Inactive' || detail?.statusApi === 'suspended'
+
+  const handleSuspend = async () => {
+    if (!id) return
+    try {
+      await updateStatus({ id, body: { action: 'suspend', reason: suspendReason || undefined } }).unwrap()
+      sSnack('User suspended successfully')
+      setInactivateModalOpen(false)
+      setSuspendReason('')
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to suspend user'
+      eSnack(msg)
+    }
+  }
+
+  const handleActivate = async () => {
+    if (!id) return
+    try {
+      await updateStatus({ id, body: { action: 'activate' } }).unwrap()
+      sSnack('User activated successfully')
+      setActivateModalOpen(false)
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to activate user'
+      eSnack(msg)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!id) return
+    try {
+      await deleteUser(id).unwrap()
+      sSnack('User deleted successfully')
+      setDeleteModalOpen(false)
+      navigate('/users')
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to delete user'
+      eSnack(msg)
+    }
+  }
+
+  if (!id) {
+    return (
+      <div className="space-y-4">
+        <Link to="/users" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Users
+        </Link>
+        <p className="text-gray-600">User ID is missing.</p>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <TailSpin height={40} width={40} color="#6366f1" />
+      </div>
+    )
+  }
+
+  if (isError || !detail) {
     return (
       <div className="space-y-4">
         <Link to="/users" className="inline-flex items-center gap-1 text-sm font-Manrope text-gray-600 hover:text-primary">
@@ -176,13 +235,13 @@ const UserDetail = () => {
 
       <Modal
         isOpen={inactivateModalOpen}
-        onClose={() => setInactivateModalOpen(false)}
+        onClose={() => { setInactivateModalOpen(false); setSuspendReason('') }}
         title="Inactivate User"
         description="Inactivating the user will disable their account and restrict their access to the platform. You can reactivate them later if needed."
         iconType="error"
         actions={[
-          { label: 'Cancel', onClick: () => setInactivateModalOpen(false), variant: 'secondary' },
-          { label: 'Inactivate User', onClick: () => { console.log('Inactivate', id); setInactivateModalOpen(false); }, variant: 'danger' },
+          { label: 'Cancel', onClick: () => { setInactivateModalOpen(false); setSuspendReason('') }, variant: 'secondary' },
+          { label: 'Inactivate User', onClick: handleSuspend, variant: 'danger', disabled: isStatusLoading },
         ]}
       />
 
@@ -194,7 +253,7 @@ const UserDetail = () => {
         iconType="success"
         actions={[
           { label: 'Cancel', onClick: () => setActivateModalOpen(false), variant: 'secondary' },
-          { label: 'Activate User', onClick: () => { console.log('Activate', id); setActivateModalOpen(false); }, variant: 'primary' },
+          { label: 'Activate User', onClick: handleActivate, variant: 'primary', disabled: isStatusLoading },
         ]}
       />
 
@@ -206,7 +265,7 @@ const UserDetail = () => {
         iconType="error"
         actions={[
           { label: 'Cancel', onClick: () => setDeleteModalOpen(false), variant: 'secondary' },
-          { label: 'Delete User', onClick: () => { console.log('Delete', id); setDeleteModalOpen(false); }, variant: 'danger' },
+          { label: 'Delete User', onClick: handleDelete, variant: 'danger', disabled: isDeleteLoading },
         ]}
       />
     </div>

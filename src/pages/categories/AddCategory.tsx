@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { Input } from '@components/formsInput'
+import { Input, ImageUpload } from '@components/formsInput'
 import { useCreateCategoryMutation } from '@store/features/category'
 import { addCategorySchema, type AddCategoryFormData } from '@helpers/schemas'
 
@@ -19,6 +19,7 @@ const AddCategory = () => {
     defaultValues: {
       name: '',
       description: '',
+      image: undefined,
     },
   })
 
@@ -26,10 +27,15 @@ const AddCategory = () => {
 
   const onSubmit = async (data: AddCategoryFormData) => {
     try {
-      await createCategory({
-        name: data.name.trim(),
-        ...(data.description?.trim() && { description: data.description.trim() }),
-      }).unwrap()
+      const formData = new FormData()
+      formData.append('name', data.name.trim())
+      if (data.description?.trim()) {
+        formData.append('description', data.description.trim())
+      }
+      if (data.image && data.image instanceof File) {
+        formData.append('image', data.image)
+      }
+      await createCategory(formData).unwrap()
       navigate('/categories')
     } catch {
       // Error can be shown via toast
@@ -80,6 +86,20 @@ const AddCategory = () => {
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   error={errors.name?.message}
+                />
+              )}
+            />
+            <Controller
+              name="image"
+              control={control}
+              render={({ field }) => (
+                <ImageUpload
+                  label="Category Image"
+                  value={field.value ?? null}
+                  onChange={(file) => field.onChange(file ?? undefined)}
+                  onBlur={field.onBlur}
+                  error={errors.image?.message}
+                  required
                 />
               )}
             />

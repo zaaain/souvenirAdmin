@@ -53,6 +53,19 @@ export const addCategorySchema = yup.object().shape({
     .trim()
     .optional()
     .default(''),
+  image: yup
+    .mixed<File>()
+    .required('Category image is required')
+    .test('is-file', 'Please select an image file', (value) => value instanceof File && value.size > 0)
+    .test('fileType', 'Only JPEG, PNG, WebP, GIF and SVG are allowed', (value) => {
+      if (!(value instanceof File)) return false
+      const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+      return allowed.includes(value.type)
+    })
+    .test('fileSize', 'Image must be 5MB or less', (value) => {
+      if (!(value instanceof File)) return false
+      return value.size <= 5 * 1024 * 1024
+    }),
 })
 
 export const createAdminSchema = yup.object().shape({
@@ -98,7 +111,8 @@ export const updateTeamMemberSchema = yup.object().shape({
 export type LoginFormData = yup.InferType<typeof loginSchema>
 export type RegisterFormData = yup.InferType<typeof registerSchema>
 export type ForgotPasswordFormData = yup.InferType<typeof forgotPasswordSchema>
-export type AddCategoryFormData = yup.InferType<typeof addCategorySchema>
+/** Form values for Add Category - image optional until user selects */
+export type AddCategoryFormData = yup.InferType<typeof addCategorySchema> & { image?: File }
 export type CreateAdminFormData = yup.InferType<typeof createAdminSchema>
 export type UpdateTeamMemberFormData = yup.InferType<typeof updateTeamMemberSchema>
 

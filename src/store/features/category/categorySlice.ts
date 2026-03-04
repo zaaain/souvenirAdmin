@@ -85,7 +85,7 @@ export const categorySlice = createApi({
       providesTags: (_result, _error, id) => [{ type: 'Categories', id }],
     }),
     createCategory: builder.mutation({
-      query: (body: { name: string; description?: string }) => ({
+      query: (body: FormData) => ({
         url: 'admin/categories',
         method: 'POST',
         body,
