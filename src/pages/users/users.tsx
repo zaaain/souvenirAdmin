@@ -190,7 +190,6 @@ const Users = () => {
     setPageSize(size)
     setPage(1)
   }
-  const handleExport = () => console.log('Export')
 
   const handleDeleteUser = async () => {
     if (!deleteUserId) return
