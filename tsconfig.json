@@ -25,7 +25,8 @@
       "@store/*": ["src/store/*"],
       "@hooks/*": ["src/hooks/*"],
       "@routes/*": ["src/routes/*"],
-      "@helpers/*": ["src/helpers/*"]
+      "@helpers/*": ["src/helpers/*"],
+      "@constants/*": ["src/constants/*"]
     },
 
     /* Linting */

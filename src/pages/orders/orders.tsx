@@ -3,22 +3,25 @@ import { useNavigate } from 'react-router-dom'
 import { Filter } from '@components/filter'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
+import { useGetOrdersQuery } from '@store/features/order'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'Processing', label: 'Processing' },
-  { value: 'Published', label: 'Published' },
-  { value: 'Shipped', label: 'Shipped' },
-  { value: 'Delivered', label: 'Delivered' },
-  { value: 'Cancelled', label: 'Cancelled' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'packed', label: 'Packed' },
+  { value: 'shipping', label: 'Shipping' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
 ]
 
 const STATUS_PILL: Record<string, string> = {
-  Processing: 'bg-gray-100 text-gray-600',
-  Published: 'bg-primary/10 text-primary',
-  Shipped: 'bg-orange-100 text-orange-600',
-  Delivered: 'bg-red-100 text-red-600',
-  Cancelled: 'bg-red-100 text-red-600',
+  pending: 'bg-gray-100 text-gray-600',
+  processing: 'bg-gray-100 text-gray-600',
+  packed: 'bg-primary/10 text-primary',
+  shipping: 'bg-orange-100 text-orange-600',
+  delivered: 'bg-emerald-100 text-emerald-700',
+  cancelled: 'bg-red-100 text-red-600',
 }
 
 function ProductIcon() {
@@ -31,14 +34,66 @@ function ProductIcon() {
   )
 }
 
-const MOCK_ORDERS: Record<string, unknown>[] = [
-  { orderId: '302012', productName: 'Amoxicillin 50MG', otherCount: 3, customerName: 'John Bushmill', customerEmail: 'johnb@mail.com', totalAmount: '$123,000', paymentMethod: 'MasterCard', orderDate: '1 min ago', orderDateRaw: '', status: 'Processing' },
-  { orderId: '302012', productName: 'Amoxicillin 50MG', otherCount: 3, customerName: 'Josh Adam', customerEmail: 'josh_adam@mail.com', totalAmount: '$123,000', paymentMethod: 'VISA', orderDate: '5 hour ago', orderDateRaw: '', status: 'Published' },
-  { orderId: '302012', productName: 'Amoxicillin 50MG', otherCount: 3, customerName: 'Sarah Miller', customerEmail: 'sarah.m@mail.com', totalAmount: '$123,000', paymentMethod: 'COD', orderDate: 'Jan 15, 2025', orderDateRaw: '2025-01-15', status: 'Shipped' },
-  { orderId: '302012', productName: 'Amoxicillin 50MG', otherCount: 3, customerName: 'Michael Chen', customerEmail: 'm.chen@mail.com', totalAmount: '$123,000', paymentMethod: 'MasterCard', orderDate: 'Jan 15, 2025', orderDateRaw: '2025-01-15', status: 'Delivered' },
-  { orderId: '302012', productName: 'Amoxicillin 50MG', otherCount: 3, customerName: 'Emma Wilson', customerEmail: 'emma.w@mail.com', totalAmount: '$123,000', paymentMethod: 'VISA', orderDate: 'Jan 14, 2025', orderDateRaw: '2025-01-14', status: 'Cancelled' },
-  { orderId: '302012', productName: 'Amoxicillin 50MG', otherCount: 3, customerName: 'David Lee', customerEmail: 'd.lee@mail.com', totalAmount: '$123,000', paymentMethod: 'COD', orderDate: 'Jan 14, 2025', orderDateRaw: '2025-01-14', status: 'Processing' },
-]
+function mapOrderRow(raw: Record<string, unknown>, rowIndex: number): Record<string, unknown> {
+  const id = raw._id ?? raw.orderId ?? raw.id ?? ''
+
+  const products = Array.isArray(raw.products) ? (raw.products as Record<string, unknown>[]) : []
+  const firstProduct = products[0] ?? {}
+  const productName =
+    raw.productName ??
+    firstProduct.productName ??
+    firstProduct.name ??
+    firstProduct.title ??
+    '—'
+  const otherCount = products.length > 1 ? products.length - 1 : 0
+
+  const user = (raw.userId ?? raw.user) as Record<string, unknown> | undefined
+  const customerName =
+    raw.customerName ??
+    ([user?.firstname, user?.lastname].filter(Boolean).join(' ') ||
+      (user?.fullName as string | undefined) ||
+      '—')
+  const customerEmail =
+    raw.customerEmail ??
+    (user?.email as string | undefined) ??
+    ''
+
+  const totalAmountRaw = raw.totalAmount ?? raw.total ?? raw.amount ?? 0
+  const totalAmount =
+    typeof totalAmountRaw === 'number'
+      ? `$${Number(totalAmountRaw).toLocaleString()}`
+      : String(totalAmountRaw ?? '')
+
+  const paymentMethodRaw = String(raw.paymentMethod ?? raw.paymentMode ?? '')
+  const paymentMethod =
+    paymentMethodRaw.length > 0
+      ? paymentMethodRaw.charAt(0).toUpperCase() + paymentMethodRaw.slice(1)
+      : ''
+  const dateRaw = raw.orderDate ?? raw.createdAt ?? raw.updatedAt ?? ''
+  const orderDate =
+    typeof dateRaw === 'string' && dateRaw.length >= 10
+      ? new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : String(dateRaw ?? '')
+  const orderDateRaw = typeof dateRaw === 'string' ? dateRaw.slice(0, 10) : dateRaw
+
+  const statusRaw = String(raw.status ?? raw.orderStatus ?? 'pending').toLowerCase()
+  const statusLabel = statusRaw ? statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1) : '—'
+
+  return {
+    orderId: String(id ?? ''),
+    productName,
+    otherCount,
+    customerName,
+    customerEmail,
+    totalAmount,
+    paymentMethod,
+    orderDate,
+    orderDateRaw,
+    status: statusLabel,
+    statusRaw,
+    rowNum: rowIndex + 1,
+  }
+}
 
 const ITEMS_PER_PAGE = 10
 
@@ -79,11 +134,15 @@ function buildColumns(onView: (id: string) => void): TableColumn[] {
     {
       key: 'status',
       label: 'Status',
-      render: (v) => (
-        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope ${STATUS_PILL[String(v ?? '')] ?? 'bg-gray-100 text-gray-600'}`}>
-          {String(v ?? '')}
-        </span>
-      ),
+      render: (v, row) => {
+        const raw = String((row as Record<string, unknown>).statusRaw ?? '').toLowerCase()
+        const cls = STATUS_PILL[raw] ?? 'bg-gray-100 text-gray-600'
+        return (
+          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope ${cls}`}>
+            {String(v ?? '')}
+          </span>
+        )
+      },
     },
     {
       key: 'actions',
@@ -109,36 +168,47 @@ const Orders = () => {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
-  const [orderDate, setOrderDate] = useState('')
   const [page, setPage] = useState(1)
 
-  const filtered = useMemo(() => {
-    let list = [...MOCK_ORDERS]
-    if (status !== 'all') list = list.filter((r) => r.status === status)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter((r) => String(r.orderId).toLowerCase().includes(q))
-    }
-    if (orderDate) {
-      list = list.filter((r) => String(r.orderDateRaw ?? '') === orderDate)
-    }
-    return list
-  }, [search, status, orderDate])
+  const { data: apiResponse, isLoading, isError, error } = useGetOrdersQuery({
+    page,
+    pageSize: ITEMS_PER_PAGE,
+    status: status === 'all' ? undefined : status,
+    text: search.trim() || undefined,
+  })
 
-  const total = filtered.length
+  const rawList = useMemo(() => {
+    const res = apiResponse as Record<string, unknown> | undefined
+    if (!res) return []
+    const dataObj = res.data as Record<string, unknown> | undefined
+    const orders = dataObj?.orders ?? dataObj?.content ?? (Array.isArray(dataObj) ? dataObj : [])
+    return Array.isArray(orders) ? (orders as Record<string, unknown>[]) : []
+  }, [apiResponse])
+
+  const total = useMemo(() => {
+    const res = apiResponse as Record<string, unknown> | undefined
+    const dataObj = res?.data as Record<string, unknown> | undefined
+    if (dataObj?.totalOrders != null) return Number(dataObj.totalOrders)
+    if (dataObj?.totalElements != null) return Number(dataObj.totalElements)
+    if (dataObj?.total != null) return Number(dataObj.total)
+    return rawList.length
+  }, [apiResponse, rawList.length])
+
   const start = (page - 1) * ITEMS_PER_PAGE
-  const sliced = filtered.slice(start, start + ITEMS_PER_PAGE).map((r, i) => ({
-    ...r,
-    rowNum: start + i + 1,
-  }))
+  const tableData = useMemo(
+    () => rawList.map((r, i) => mapOrderRow(r, start + i)),
+    [rawList, page],
+  )
 
   const columns = useMemo(() => buildColumns((id) => navigate(`/orders/${id}`)), [navigate])
 
   const handleApply = () => setPage(1)
+  const handleExport = () => {
+    // TODO: implement export
+  }
   const handleClearAll = () => {
     setSearch('')
     setStatus('all')
-    setOrderDate('')
     setPage(1)
   }
 
@@ -149,16 +219,16 @@ const Orders = () => {
           <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">Orders</h1>
           <p className="text-gray-500 font-Manrope mt-1">Manage your orders</p>
         </div>
-        <button
+        {/* <button
           type="button"
-          onClick={() => console.log('Export')}
+          onClick={handleExport}
           className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary text-sm font-Manrope hover:bg-primary/5 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
           Export
-        </button>
+        </button> */}
       </div>
 
       <Filter
@@ -168,21 +238,24 @@ const Orders = () => {
         statusValue={status}
         onStatusChange={setStatus}
         statusOptions={STATUS_OPTIONS}
-        dateValue={orderDate}
-        onDateChange={setOrderDate}
-        dateLabel="Order Date"
-        datePlaceholder="Select Date"
+        showDate={false}
         onApply={handleApply}
         onClearAll={handleClearAll}
       />
 
+      {isError && (
+        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-red-600">
+          {String((error as { data?: { message?: string } })?.data?.message ?? (error as Error)?.message ?? 'Failed to load orders')}
+        </div>
+      )}
       <PaginateTable
         headers={columns}
-        data={sliced}
+        data={tableData}
         currentPage={page}
         itemsPerPage={ITEMS_PER_PAGE}
         totalResults={total}
         onPageChange={setPage}
+        loading={isLoading}
       />
     </div>
   )

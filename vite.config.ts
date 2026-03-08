@@ -10,6 +10,8 @@ export default defineConfig({
   // GitHub Pages: repo name subpath. Local dev mein '/' (default)
   base: process.env.GITHUB_ACTIONS ? '/souvenirAdmin/' : '/',
   plugins: [react()],
+  // Move Vite cache outside node_modules to avoid OneDrive/Windows locks
+  cacheDir: '.vite-cache',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -20,6 +22,7 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@routes': path.resolve(__dirname, './src/routes'),
       '@helpers': path.resolve(__dirname, './src/helpers'),
+      '@constants': path.resolve(__dirname, './src/constants'),
     },
   },
 })
