@@ -84,17 +84,18 @@ const Categories = () => {
   const [status, setStatus] = useState('all')
   const [dateAdded, setDateAdded] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null)
 
   const queryParams = useMemo(
     () => ({
       page,
-      pageSize: ITEMS_PER_PAGE,
+      pageSize,
       ...(status !== 'all' && { status: status.toLowerCase() }),
       ...(search.trim() && { text: search.trim() }),
     }),
-    [page, status, search]
+    [page, pageSize, status, search]
   )
 
   const { data, isLoading, isError, error } = useGetCategoriesQuery(queryParams)
@@ -109,7 +110,7 @@ const Categories = () => {
   }, [data])
 
   const filtered = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE
+    const start = (page - 1) * pageSize
     let list = rawList.map((r, i) => mapCategoryRow(r, start + i))
     if (dateAdded) {
       list = list.filter((r) => String(r.dateAddedRaw ?? '') === dateAdded)
@@ -142,6 +143,10 @@ const Categories = () => {
     setSearch('')
     setStatus('all')
     setDateAdded('')
+    setPage(1)
+  }
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
     setPage(1)
   }
   // const handleExport = () => console.log('Export')
@@ -200,9 +205,10 @@ const Categories = () => {
         headers={columns}
         data={sliced}
         currentPage={page}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={pageSize}
         totalResults={total}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         loading={isLoading}
       />
 

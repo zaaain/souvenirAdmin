@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { TailSpin } from 'react-loader-spinner'
 import { VendorInfoCard } from '@components/card'
 import type { VendorInfoCardItem } from '@components/card'
 import { Modal } from '@components/modal'
@@ -73,8 +72,36 @@ const TeamDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <TailSpin visible height={60} width={60} color="#2466D0" ariaLabel="Loading team member" />
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="shrink-0 w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="shrink-0 w-[100px] h-[100px] rounded-full bg-gray-100 animate-pulse" />
+            <div className="min-w-0 space-y-2">
+              <div className="h-7 w-52 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-36 bg-gray-100 rounded-lg animate-pulse" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <div className="h-10 w-24 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="h-10 w-10 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="h-10 w-24 bg-gray-100 rounded-lg animate-pulse" />
+          </div>
+        </div>
+
+        {/* Personal Information card skeleton */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <div className="h-4 w-44 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-4">
+            {[1, 2, 3].map((k) => (
+              <div key={k} className="space-y-2">
+                <div className="h-3 w-20 bg-gray-100 rounded-lg animate-pulse" />
+                <div className="h-4 w-36 bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

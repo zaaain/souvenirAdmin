@@ -31,6 +31,10 @@ export interface GetWithdrawalsParams {
   vendorId?: string
 }
 
+export interface RejectWithdrawalBody {
+  reason: string
+}
+
 export const withdrawalSlice = createApi({
   reducerPath: 'withdrawalApi',
   baseQuery: baseQueryWithReauth,
@@ -78,11 +82,12 @@ export const withdrawalSlice = createApi({
       ],
     }),
     rejectWithdrawal: builder.mutation({
-      query: (id: string) => ({
+      query: ({ id, body }: { id: string; body: RejectWithdrawalBody }) => ({
         url: `admin/withdrawals/${id}/reject`,
         method: 'PUT',
+        body,
       }),
-      invalidatesTags: (_result, _error, id) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: 'Withdrawals', id },
         { type: 'Withdrawals', id: 'LIST' },
       ],

@@ -146,7 +146,9 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   }
 
   const isActive = (path: string) => {
-    return location.pathname === path
+    if (location.pathname === path) return true
+    if (path !== '/' && location.pathname.startsWith(`${path}/`)) return true
+    return false
   }
 
   const handleLinkClick = () => {

@@ -2,45 +2,16 @@ import { useState, useMemo } from 'react'
 import { Modal } from '@components/modal'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
-
-const STAT_CARDS = [
-  { label: 'Total Revenue', value: '$248,592.00', bar: 'bg-primary' },
-  { label: 'Escrow Balance', value: '$18,420.00', bar: 'bg-emerald-500' },
-  { label: 'Total Requested Payouts', value: '43', bar: 'bg-emerald-400' },
-  { label: 'Resolved Payouts', value: '1,847', bar: 'bg-primary' },
-]
-
-const PAYOUT_STATUS: Record<string, string> = {
-  Pending: 'bg-amber-500 text-white',
-  Success: 'bg-emerald-500 text-white',
-}
-
-const RECORD_STATUS: Record<string, string> = {
-  Pending: 'bg-amber-500 text-white',
-  Success: 'bg-emerald-500 text-white',
-  Failed: 'bg-red-500 text-white',
-}
-
-const MOCK_PAYOUTS: Record<string, unknown>[] = [
-  { id: 'po-1', vendorName: 'PetShop', vendorSite: 'www.techgearsolutions.com', bankMask: '*********** 1234', bankHolder: 'Maddie Fox', amount: '$123,000', commission: '$324.00 (10%)', period: 'Jan 1-15, 2025', status: 'Pending' },
-  { id: 'po-2', vendorName: 'PetShop', vendorSite: 'www.techgearsolutions.com', bankMask: '*********** 1234', bankHolder: 'Maddie Fox', amount: '$125,000', commission: '$350.00 (10%)', period: 'Jan 1-15, 2025', status: 'Pending' },
-  { id: 'po-3', vendorName: 'PetShop', vendorSite: 'www.techgearsolutions.com', bankMask: '*********** 1234', bankHolder: 'Maddie Fox', amount: '$123,000', commission: '$324.00 (10%)', period: 'Dec 16-31, 2024', status: 'Success' },
-  { id: 'po-4', vendorName: 'PetShop', vendorSite: 'www.techgearsolutions.com', bankMask: '*********** 1234', bankHolder: 'Maddie Fox', amount: '$98,500', commission: '$265.00 (10%)', period: 'Dec 1-15, 2024', status: 'Success' },
-  { id: 'po-5', vendorName: 'PetShop', vendorSite: 'www.techgearsolutions.com', bankMask: '*********** 1234', bankHolder: 'Maddie Fox', amount: '$87,200', commission: '$232.00 (10%)', period: 'Nov 16-30, 2024', status: 'Success' },
-  { id: 'po-6', vendorName: 'PetShop', vendorSite: 'www.techgearsolutions.com', bankMask: '*********** 1234', bankHolder: 'Maddie Fox', amount: '$112,000', commission: '$298.00 (10%)', period: 'Nov 1-15, 2024', status: 'Success' },
-]
-
-const MOCK_RECORDS: Record<string, unknown>[] = [
-  { id: 'pr-1', invoiceId: 'TXN-2025-4A2B', orderId: 'ORD-10583', vendorName: 'PetShop', vendorSite: 'www.techgearsolut...', customerName: 'James Patterson', customerEmail: 'j.patterson@email.com', paymentMask: '********* 1234', amount: '$123,000', paymentMethod: 'MasterCard', date: 'Jan 15, 2025', status: 'Pending' },
-  { id: 'pr-2', invoiceId: 'TXN-2025-5B3C', orderId: 'ORD-10584', vendorName: 'PetShop', vendorSite: 'www.techgearsolut...', customerName: 'Sarah Miller', customerEmail: 's.miller@email.com', paymentMask: '********* 5678', amount: '$45,000', paymentMethod: 'VISA', date: 'Jan 15, 2025', status: 'Success' },
-  { id: 'pr-3', invoiceId: 'TXN-2025-6C4D', orderId: 'ORD-10585', vendorName: 'PetShop', vendorSite: 'www.techgearsolut...', customerName: 'Michael Brown', customerEmail: 'm.brown@email.com', paymentMask: '********* 9012', amount: '$28,500', paymentMethod: 'COD', date: 'Jan 14, 2025', status: 'Success' },
-  { id: 'pr-4', invoiceId: 'TXN-2025-7D5E', orderId: 'ORD-10586', vendorName: 'PetShop', vendorSite: 'www.techgearsolut...', customerName: 'Emily Davis', customerEmail: 'e.davis@email.com', paymentMask: '********* 3456', amount: '$67,000', paymentMethod: 'MasterCard', date: 'Jan 14, 2025', status: 'Failed' },
-  { id: 'pr-5', invoiceId: 'TXN-2025-8E6F', orderId: 'ORD-10587', vendorName: 'PetShop', vendorSite: 'www.techgearsolut...', customerName: 'David Wilson', customerEmail: 'd.wilson@email.com', paymentMask: '********* 7890', amount: '$34,200', paymentMethod: 'VISA', date: 'Jan 13, 2025', status: 'Success' },
-  { id: 'pr-6', invoiceId: 'TXN-2025-9F7A', orderId: 'ORD-10588', vendorName: 'PetShop', vendorSite: 'www.techgearsolut...', customerName: 'Lisa Anderson', customerEmail: 'l.anderson@email.com', paymentMask: '********* 2345', amount: '$89,100', paymentMethod: 'MasterCard', date: 'Jan 13, 2025', status: 'Pending' },
-]
+import { useGetWithdrawalsQuery, useApproveWithdrawalMutation, useRejectWithdrawalMutation } from '@store/features/withdrawal'
+import { eSnack, sSnack } from '@hooks/useToast'
 
 const ITEMS_PER_PAGE = 10
-const TOTAL_RESULTS = 147
+
+const STATUS_PILL: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-700',
+  approved: 'bg-emerald-100 text-emerald-700',
+  rejected: 'bg-red-100 text-red-700',
+}
 
 function VendorCell({ name, site }: { name: string; site: string }) {
   return (
@@ -60,35 +31,216 @@ function VendorCell({ name, site }: { name: string; site: string }) {
   )
 }
 
-function CustomerCell({ name, email }: { name: string; email: string }) {
-  const initial = name ? name.charAt(0).toUpperCase() : '—'
-  return (
-    <div className="flex items-center gap-2">
-      <div className="shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-ManropeBold">
-        {initial}
-      </div>
-      <div>
-        <p className="text-sm font-Manrope text-gray-800">{name}</p>
-        <p className="text-xs text-gray-500 truncate max-w-[140px]">{email}</p>
-      </div>
-    </div>
-  )
-}
-
 const EarningPayout = () => {
-  const [activeTab, setActiveTab] = useState<'payouts' | 'records'>('payouts')
   const [page, setPage] = useState(1)
-  const [releaseModalOpen, setReleaseModalOpen] = useState(false)
-  const [releasePayoutId, setReleasePayoutId] = useState<string | null>(null)
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
 
-  const payoutColumns: TableColumn[] = useMemo(
+  const { data: apiResponse, isLoading } = useGetWithdrawalsQuery({
+    page,
+    pageSize,
+  })
+  const [approveWithdrawal, { isLoading: isApproveLoading }] = useApproveWithdrawalMutation()
+  const [rejectWithdrawal, { isLoading: isRejectLoading }] = useRejectWithdrawalMutation()
+
+  const list = useMemo(() => {
+    const res = apiResponse as Record<string, unknown> | undefined
+    if (!res) return []
+    const dataObj = res.data as Record<string, unknown> | undefined
+    if (!dataObj) return []
+    const raw =
+      dataObj.withdrawals ??
+      dataObj.requests ??
+      dataObj.items ??
+      dataObj.content ??
+      dataObj.data ??
+      dataObj.list
+    return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : []
+  }, [apiResponse])
+
+  const total = useMemo(() => {
+    const res = apiResponse as Record<string, unknown> | undefined
+    const dataObj = res?.data as Record<string, unknown> | undefined
+    if (!dataObj) return list.length
+    if (dataObj.totalWithdrawals != null) return Number(dataObj.totalWithdrawals)
+    if (dataObj.totalElements != null) return Number(dataObj.totalElements)
+    if (dataObj.total != null) return Number(dataObj.total)
+    if (dataObj.totalCount != null) return Number(dataObj.totalCount)
+    return list.length
+  }, [apiResponse, list.length])
+
+  const tableData = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return list.map((row, index) => {
+      const id = String(row._id ?? row.id ?? row.withdrawalId ?? '')
+
+      const vendor = (row.vendor ?? row.vendorId) as Record<string, unknown> | undefined
+      const vendorName =
+        String(row.vendorName ?? '').trim() ||
+        [vendor?.firstname, vendor?.lastname].filter(Boolean).join(' ').trim() ||
+        String(vendor?.businessName ?? vendor?.fullName ?? '') ||
+        '—'
+      const vendorSite = String(row.vendorWebsite ?? vendor?.website ?? vendor?.storeUrl ?? '') || ''
+
+      const amountRaw = row.amount ?? row.totalAmount ?? row.withdrawAmount ?? 0
+      const amount =
+        typeof amountRaw === 'number'
+          ? `QAR ${Number(amountRaw).toLocaleString()}`
+          : String(amountRaw ?? '')
+
+      const feeRaw = row.fee ?? row.commission ?? row.charge ?? 0
+      const fee =
+        typeof feeRaw === 'number'
+          ? `QAR ${Number(feeRaw).toLocaleString()}`
+          : feeRaw
+            ? String(feeRaw)
+            : '-'
+
+      const bankDetails = row.bankDetails as
+        | {
+            bankName?: string
+            accountHolderName?: string
+            accountNumber?: string | number
+            accountType?: string
+          }
+        | undefined
+
+      const payoutMethod = String(
+        row.payoutMethod ??
+          row.paymentMethod ??
+          row.method ??
+          (bankDetails?.bankName ? 'Bank Transfer' : '')
+      )
+
+      const bankMask =
+        row.bankMask ??
+        row.maskedAccount ??
+        bankDetails?.accountNumber ??
+        row.accountNumber ??
+        row.iban ??
+        ''
+
+      const holder =
+        row.bankHolder ??
+        row.accountHolderName ??
+        bankDetails?.accountHolderName ??
+        vendorName
+
+      const dateRaw = row.requestDate ?? row.createdAt ?? row.updatedAt ?? ''
+      const date =
+        typeof dateRaw === 'string' && dateRaw.length >= 10
+          ? new Date(dateRaw).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : String(dateRaw ?? '')
+
+      const statusRaw = String(
+        row.status ??
+          row.payoutStatus ??
+          row.withdrawalStatus ??
+          'pending'
+      ).toLowerCase()
+      const status =
+        statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1)
+
+      return {
+        id,
+        rowNum: start + index + 1,
+        vendorName,
+        vendorSite,
+        bankMask: bankMask ? String(bankMask) : '—',
+        bankHolder: String(holder ?? ''),
+        amount,
+        commission: fee,
+        payoutMethod,
+        date,
+        status,
+        statusRaw,
+      }
+    })
+  }, [list, page])
+
+  const stats = useMemo(() => {
+    const totalRequested = list.length
+    const pending = list.filter((r) => {
+      const status = String(
+        (r.status ??
+          (r as Record<string, unknown>).payoutStatus ??
+          (r as Record<string, unknown>).withdrawalStatus ??
+          'pending') as string
+      ).toLowerCase()
+      return status === 'pending'
+    }).length
+    const approved = list.filter((r) => {
+      const status = String(
+        (r.status ??
+          (r as Record<string, unknown>).payoutStatus ??
+          (r as Record<string, unknown>).withdrawalStatus ??
+          '') as string
+      ).toLowerCase()
+      return status === 'approved' || status === 'success' || status === 'completed'
+    }).length
+    const totalAmount = list.reduce((sum, r) => {
+      const val = (r.amount ??
+        (r as Record<string, unknown>).totalAmount ??
+        (r as Record<string, unknown>).withdrawAmount) as number | string | undefined
+      const num =
+        typeof val === 'number'
+          ? val
+          : typeof val === 'string'
+            ? Number(val.replace(/[^\d.-]/g, '')) || 0
+            : 0
+      return sum + num
+    }, 0)
+    return {
+      totalAmount,
+      totalRequested,
+      pending,
+      approved,
+    }
+  }, [list])
+
+  const statCards = useMemo(
+    () => [
+      {
+        label: 'Total Requested Amount',
+        value: `QAR ${stats.totalAmount.toLocaleString()}`,
+        bar: 'bg-primary',
+      },
+      {
+        label: 'Total Requests',
+        value: String(stats.totalRequested),
+        bar: 'bg-emerald-500',
+      },
+      {
+        label: 'Pending Requests',
+        value: String(stats.pending),
+        bar: 'bg-amber-500',
+      },
+      {
+        label: 'Approved Requests',
+        value: String(stats.approved),
+        bar: 'bg-emerald-400',
+      },
+    ],
+    [stats],
+  )
+
+  const columns: TableColumn[] = useMemo(
     () => [
       { key: 'rowNum', label: '#' },
       {
         key: 'vendorName',
         label: 'Vendor',
-        render: (_, row) => (
-          <VendorCell name={String(row.vendorName ?? '')} site={String(row.vendorSite ?? '')} />
+        render: (_v, row) => (
+          <VendorCell
+            name={String(row.vendorName ?? '')}
+            site={String(row.vendorSite ?? '')}
+          />
         ),
       },
       {
@@ -96,136 +248,112 @@ const EarningPayout = () => {
         label: 'Bank Account',
         render: (v, row) => (
           <div>
-            <p className="text-sm font-Manrope text-gray-800">{String(v ?? '')}</p>
-            <p className="text-xs text-gray-500">{String(row.bankHolder ?? '')}</p>
+            <p className="text-sm font-Manrope text-gray-800">
+              {String(v ?? '')}
+            </p>
+            <p className="text-xs text-gray-500">
+              {String(row.bankHolder ?? '')}
+            </p>
           </div>
         ),
       },
       { key: 'amount', label: 'Amount' },
-      { key: 'commission', label: 'Commission' },
-      { key: 'period', label: 'Period' },
+      { key: 'commission', label: 'Platform Fee' },
+      { key: 'payoutMethod', label: 'Payout Method' },
+      { key: 'date', label: 'Requested On' },
       {
         key: 'status',
         label: 'Status',
-        render: (v) => (
-          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope ${PAYOUT_STATUS[String(v ?? '')] ?? 'bg-gray-100 text-gray-600'}`}>
-            {String(v ?? '')}
-          </span>
-        ),
+        render: (_v, row) => {
+          const raw = String(row.statusRaw ?? '').toLowerCase()
+          const pillClass = STATUS_PILL[raw] ?? 'bg-gray-100 text-gray-600'
+          return (
+            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope capitalize ${pillClass}`}>
+              {String(row.status ?? '')}
+            </span>
+          )
+        },
       },
       {
         key: 'actions',
         label: 'Actions',
-        render: (_, row) => {
+        render: (_v, row) => {
           const id = String(row.id ?? '')
-          const isPending = row.status === 'Pending'
+          const raw = String(row.statusRaw ?? '').toLowerCase()
+          const isPending = raw === 'pending'
           return (
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => console.log('Download', id)}
-                className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded"
-                aria-label="Download"
+                onClick={() => {
+                  setSelectedId(id)
+                  setActionType('approve')
+                }}
+                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Approve withdrawal"
+                disabled={!isPending}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </button>
-              {isPending && (
-                <button
-                  type="button"
-                  onClick={() => { setReleasePayoutId(id); setReleaseModalOpen(true) }}
-                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                  aria-label="Release"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedId(id)
+                  setActionType('reject')
+                }}
+                className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Reject withdrawal"
+                disabled={!isPending}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           )
         },
       },
     ],
-    []
+    [],
   )
 
-  const recordColumns: TableColumn[] = useMemo(
-    () => [
-      { key: 'rowNum', label: '#' },
-      {
-        key: 'invoiceId',
-        label: 'Invoice ID',
-        render: (v, row) => (
-          <div>
-            <p className="text-sm font-Manrope text-gray-800">{String(v ?? '')}</p>
-            <a href="#" className="text-xs text-primary hover:underline" onClick={(e) => { e.preventDefault(); console.log('Order', row.orderId) }}>
-              Order #{String(row.orderId ?? '')}
-            </a>
-          </div>
-        ),
-      },
-      {
-        key: 'vendorName',
-        label: 'Vendor',
-        render: (_, row) => (
-          <VendorCell name={String(row.vendorName ?? '')} site={String(row.vendorSite ?? '')} />
-        ),
-      },
-      {
-        key: 'customerName',
-        label: 'Customer',
-        render: (_, row) => (
-          <CustomerCell name={String(row.customerName ?? '')} email={String(row.customerEmail ?? '')} />
-        ),
-      },
-      { key: 'paymentMask', label: 'Payment Information' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'paymentMethod', label: 'Payment Method' },
-      { key: 'date', label: 'Date' },
-      {
-        key: 'status',
-        label: 'Status',
-        render: (v) => (
-          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-Manrope ${RECORD_STATUS[String(v ?? '')] ?? 'bg-gray-100 text-gray-600'}`}>
-            {String(v ?? '')}
-          </span>
-        ),
-      },
-      {
-        key: 'actions',
-        label: 'Actions',
-        render: (_, row) => (
-          <button
-            type="button"
-            onClick={() => console.log('Download', row.id)}
-            className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded"
-            aria-label="Download"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-          </button>
-        ),
-      },
-    ],
-    []
-  )
+  const isActionModalOpen = Boolean(selectedId && actionType)
 
-  const payoutsData = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE
-    return MOCK_PAYOUTS.slice(0, 6).map((r, i) => ({ ...r, rowNum: start + i + 1 }))
-  }, [page])
-
-  const recordsData = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE
-    return MOCK_RECORDS.slice(0, 6).map((r, i) => ({ ...r, rowNum: start + i + 1 }))
-  }, [page])
-
-  const handleTabChange = (tab: 'payouts' | 'records') => {
-    setActiveTab(tab)
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
     setPage(1)
+  }
+
+  const handleCloseModal = () => {
+    setSelectedId(null)
+    setActionType(null)
+    setRejectReason('')
+  }
+
+  const handleConfirmAction = async () => {
+    if (!selectedId || !actionType) return
+    try {
+      if (actionType === 'approve') {
+        const result = await approveWithdrawal(selectedId).unwrap()
+        sSnack(result?.message ?? 'Withdrawal approved successfully')
+      } else {
+        const trimmed = rejectReason.trim()
+        if (!trimmed) return
+        const result = await rejectWithdrawal({
+          id: selectedId,
+          body: { reason: trimmed },
+        }).unwrap()
+        sSnack(result?.message ?? 'Withdrawal rejected')
+      }
+      handleCloseModal()
+    } catch (err: unknown) {
+      const msg =
+        (err as { data?: { message?: string } })?.data?.message ??
+        'Failed to update withdrawal'
+      eSnack(msg)
+    }
   }
 
   return (
@@ -233,7 +361,7 @@ const EarningPayout = () => {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-ManropeBold text-gray-800">Earning & Payout</h1>
-          <p className="text-gray-500 font-Manrope mt-1">Manage your orders</p>
+          <p className="text-gray-500 font-Manrope mt-1">Manage vendor withdrawal requests and payouts</p>
         </div>
         <button
           type="button"
@@ -247,11 +375,10 @@ const EarningPayout = () => {
         </button>
       </div>
 
-      {/* Payout Dashboard - Stat cards */}
       <div>
         <h3 className="text-base font-ManropeBold text-gray-800 mb-4">Payout Dashboard</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {STAT_CARDS.map((c) => (
+          {statCards.map((c) => (
             <div key={c.label} className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm flex items-start justify-between relative overflow-hidden">
               <div>
                 <p className="text-base font-ManropeBold text-gray-800">{c.label}</p>
@@ -263,56 +390,60 @@ const EarningPayout = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <div className="flex gap-6">
-          <button
-            type="button"
-            onClick={() => handleTabChange('payouts')}
-            className={`pb-3 text-sm font-ManropeBold transition-colors border-b-2 -mb-px ${
-              activeTab === 'payouts' ? 'text-primary border-primary' : 'text-gray-500 border-transparent hover:text-gray-700'
-            }`}
-          >
-            Payment Payouts
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange('records')}
-            className={`pb-3 text-sm font-ManropeBold transition-colors border-b-2 -mb-px ${
-              activeTab === 'records' ? 'text-primary border-primary' : 'text-gray-500 border-transparent hover:text-gray-700'
-            }`}
-          >
-            Payment Records
-          </button>
-        </div>
-      </div>
-
-      {/* Table */}
       <div>
         <h3 className="text-base font-ManropeBold text-gray-800 mb-4">
-          {activeTab === 'payouts' ? 'Payment Payouts' : 'Payment Records'}
+          Withdrawal Requests
         </h3>
         <PaginateTable
-          headers={activeTab === 'payouts' ? payoutColumns : recordColumns}
-          data={activeTab === 'payouts' ? payoutsData : recordsData}
+          headers={columns}
+          data={tableData}
           currentPage={page}
-          itemsPerPage={ITEMS_PER_PAGE}
-          totalResults={TOTAL_RESULTS}
+          itemsPerPage={pageSize}
+          totalResults={total}
           onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+          loading={isLoading}
         />
       </div>
 
       <Modal
-        isOpen={releaseModalOpen}
-        onClose={() => { setReleaseModalOpen(false); setReleasePayoutId(null) }}
-        title="Release Payment"
-        description="Are you sure you want to release the payment? The payout request will be approved and payment will be disbursed to the vendor's bank account."
-        iconType="success"
+        isOpen={isActionModalOpen}
+        onClose={handleCloseModal}
+        title={actionType === 'reject' ? 'Reject Withdrawal' : 'Approve Withdrawal'}
+        description={
+          actionType === 'reject'
+            ? 'Please provide a reason for rejecting this withdrawal request. The vendor will not receive this payout.'
+            : 'Are you sure you want to approve this withdrawal request and release the payout to the vendor?'
+        }
+        iconType={actionType === 'reject' ? 'error' : 'success'}
         actions={[
-          { label: 'Cancel', onClick: () => { setReleaseModalOpen(false); setReleasePayoutId(null) }, variant: 'secondary' },
-          { label: 'Release Payment', onClick: () => { console.log('Release', releasePayoutId); setReleaseModalOpen(false); setReleasePayoutId(null) }, variant: 'primary' },
+          { label: 'Cancel', onClick: handleCloseModal, variant: 'secondary' },
+          {
+            label: actionType === 'reject' ? 'Reject Withdrawal' : 'Approve Withdrawal',
+            onClick: handleConfirmAction,
+            variant: actionType === 'reject' ? 'danger' : 'primary',
+            disabled:
+              isApproveLoading ||
+              isRejectLoading ||
+              (actionType === 'reject' && !rejectReason.trim()),
+          },
         ]}
-      />
+      >
+        {actionType === 'reject' && (
+          <div className="mt-4">
+            <label className="block text-sm font-Manrope text-gray-700 mb-1">
+              Rejection Reason
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-Manrope focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none"
+              placeholder="Enter reason for rejecting this withdrawal..."
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

@@ -25,6 +25,8 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 export interface GetVendorsParams {
   page?: number
   pageSize?: number
+  status?: string
+  text?: string
 }
 
 export const vendorSlice = createApi({
@@ -36,9 +38,12 @@ export const vendorSlice = createApi({
       query: (params: GetVendorsParams) => {
         const page = params?.page ?? 1
         const pageSize = params?.pageSize ?? 10
+        const queryParams: Record<string, string | number> = { page, pageSize }
+        if (params?.status) queryParams.status = params.status
+        if (params?.text) queryParams.text = params.text
         return {
           url: 'admin/vendors',
-          params: { page, pageSize },
+          params: queryParams,
         }
       },
       providesTags: ['Vendors'],

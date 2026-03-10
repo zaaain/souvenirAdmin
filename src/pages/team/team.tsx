@@ -125,12 +125,13 @@ const Team = () => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteAdminId, setDeleteAdminId] = useState<string | null>(null)
 
   const { data: apiResponse, isLoading } = useGetSubadminsQuery({
     page,
-    pageSize: ITEMS_PER_PAGE,
+    pageSize,
     status: status !== 'all' ? status : undefined,
     text: search.trim() || undefined,
   })
@@ -156,9 +157,9 @@ const Team = () => {
   }, [apiResponse, rawList.length])
 
   const tableData = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE
+    const start = (page - 1) * pageSize
     return rawList.map((r, i) => mapSubadminToRow(r, i, start))
-  }, [rawList, page])
+  }, [rawList, page, pageSize])
 
   const columns = useMemo(
     () =>
@@ -174,6 +175,10 @@ const Team = () => {
   )
 
   const handleApply = () => setPage(1)
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
   const handleClearAll = () => {
     setSearch('')
     setStatus('all')
@@ -245,9 +250,10 @@ const Team = () => {
         headers={columns}
         data={tableData}
         currentPage={page}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={pageSize}
         totalResults={totalFromApi}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         loading={isLoading}
       />
 

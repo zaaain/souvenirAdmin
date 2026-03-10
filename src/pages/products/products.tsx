@@ -1,10 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Filter } from '@components/filter'
 import { Modal } from '@components/modal'
 import { PaginateTable } from '@components/table'
 import type { TableColumn } from '@components/table'
-import { useGetProductsQuery, useDeleteProductMutation } from '@store/features/product'
+import {
+  useGetProductsQuery,
+  useDeleteProductMutation,
+  useUpdateProductApprovalMutation,
+  useUpdateProductStatusMutation,
+} from '@store/features/product'
+import { eSnack, sSnack } from '@hooks/useToast'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -31,7 +37,7 @@ function ProductIcon() {
   )
 }
 
-const ITEMS_PER_PAGE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 function mapProductRow(p: Record<string, unknown>, rowIndex: number): Record<string, unknown> {
   const id = p._id ?? p.productId ?? p.id ?? ''
@@ -42,13 +48,14 @@ function mapProductRow(p: Record<string, unknown>, rowIndex: number): Record<str
     : String(p.category ?? p.categoryName ?? '')
   const inventory = p.inventory ?? p.stock ?? p.quantity ?? 0
   const priceRaw = p.price ?? p.unitPrice ?? 0
-  const price = typeof priceRaw === 'number' ? `$${Number(priceRaw).toLocaleString()}` : String(priceRaw ?? '')
+  const price = typeof priceRaw === 'number' ? `QAR ${Number(priceRaw).toLocaleString()}` : String(priceRaw ?? '')
   const dateRaw = p.createdAt ?? p.updatedAt ?? p.dateAdded ?? ''
   const dateFormatted =
     typeof dateRaw === 'string' && dateRaw.length >= 10
       ? new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       : String(dateRaw ?? '')
-  const status = String(p.status ?? (p.isActive === true ? 'Published' : 'Pending'))
+  const statusRaw = String(p.status ?? (p.isActive === true ? 'Published' : 'Pending'))
+  const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1).toLowerCase()
   return {
     productId: id,
     productName: name,
@@ -95,6 +102,10 @@ function buildColumns(onView: (id: string) => void, onDelete: (id: string) => vo
       label: 'Actions',
       render: (_, row) => {
         const id = String(row.productId ?? '')
+        const status = String(row.status ?? '')
+        const isPending = status === 'Pending'
+        const isPublished = status === 'Published'
+        const isSuspended = status === 'Suspended'
         return (
           <div className="flex items-center gap-2">
             <button
@@ -108,6 +119,22 @@ function buildColumns(onView: (id: string) => void, onDelete: (id: string) => vo
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
             </button>
+            {(isPending || isPublished || isSuspended) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const action = isPending ? 'approve' : isPublished ? 'suspend' : 'reactivate'
+                  window.dispatchEvent(new CustomEvent('product-status-action', { detail: { id, action } }))
+                }}
+                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                aria-label="Update status"
+                title={isPending ? 'Approve' : isPublished ? 'Suspend' : 'Reactivate'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isPublished ? 'M10 9v6m4-6v6' : 'M5 13l4 4L19 7'} />
+                </svg>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onDelete(id)}
@@ -131,11 +158,38 @@ const Products = () => {
   const [status, setStatus] = useState('all')
   const [dateAdded, setDateAdded] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
+  const [statusModalOpen, setStatusModalOpen] = useState(false)
+  const [statusAction, setStatusAction] = useState<'approve' | 'suspend' | 'reactivate' | null>(null)
+  const [statusProductId, setStatusProductId] = useState<string | null>(null)
 
-  const { data, isLoading, isError, error } = useGetProductsQuery({ page, pageSize: ITEMS_PER_PAGE })
+  const { data, isLoading, isError, error } = useGetProductsQuery({
+    page,
+    pageSize,
+    status: status === 'all' ? undefined : status.toLowerCase(),
+    text: search.trim() || undefined,
+  })
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
+  const [updateApproval, { isLoading: isApprovalLoading }] = useUpdateProductApprovalMutation()
+  const [updateStatus, { isLoading: isStatusLoading }] = useUpdateProductStatusMutation()
+
+  // Listen for action event from table cell (keeps columns stable without prop drilling)
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const e = event as CustomEvent
+      const detail = (e.detail ?? {}) as { id?: string; action?: string }
+      const id = String(detail.id ?? '')
+      const action = detail.action as 'approve' | 'suspend' | 'reactivate' | undefined
+      if (!id || !action) return
+      setStatusProductId(id)
+      setStatusAction(action)
+      setStatusModalOpen(true)
+    }
+    window.addEventListener('product-status-action' as any, handler as EventListener)
+    return () => window.removeEventListener('product-status-action' as any, handler as EventListener)
+  }, [])
 
   const rawList = useMemo(() => {
     const res = data as Record<string, unknown> | undefined
@@ -145,10 +199,10 @@ const Products = () => {
     return Array.isArray(products) ? (products as Record<string, unknown>[]) : []
   }, [data])
 
-  const start = (page - 1) * ITEMS_PER_PAGE
+  const start = (page - 1) * pageSize
   const tableData = useMemo(
     () => rawList.map((r, i) => mapProductRow(r, start + i)),
-    [rawList, page]
+    [rawList, page, pageSize]
   )
 
   const total = useMemo(() => {
@@ -178,6 +232,35 @@ const Products = () => {
     setStatus('all')
     setDateAdded('')
     setPage(1)
+  }
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
+
+  const closeStatusModal = () => {
+    setStatusModalOpen(false)
+    setStatusProductId(null)
+    setStatusAction(null)
+  }
+
+  const handleConfirmStatusAction = async () => {
+    if (!statusProductId || !statusAction) return
+    try {
+      if (statusAction === 'approve') {
+        const res = await updateApproval({ id: statusProductId, body: { action: 'approve' } }).unwrap()
+        sSnack(res?.message ?? 'Product approved')
+      } else if (statusAction === 'suspend') {
+        const res = await updateStatus({ id: statusProductId, body: { action: 'suspend' } }).unwrap()
+        sSnack(res?.message ?? 'Product suspended')
+      } else {
+        const res = await updateStatus({ id: statusProductId, body: { action: 'reactivate' } }).unwrap()
+        sSnack(res?.message ?? 'Product reactivated')
+      }
+      closeStatusModal()
+    } catch (err: unknown) {
+      eSnack((err as { data?: { message?: string } })?.data?.message ?? 'Failed to update product status')
+    }
   }
   // const handleExport = () => console.log('Export')
 
@@ -225,9 +308,10 @@ const Products = () => {
         headers={columns}
         data={tableData}
         currentPage={page}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={pageSize}
         totalResults={total}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         loading={isLoading}
       />
 
@@ -253,6 +337,40 @@ const Products = () => {
               }
             },
             variant: 'danger',
+          },
+        ]}
+      />
+
+      <Modal
+        isOpen={statusModalOpen}
+        onClose={closeStatusModal}
+        title={
+          statusAction === 'approve'
+            ? 'Approve Product'
+            : statusAction === 'suspend'
+              ? 'Suspend Product'
+              : 'Reactivate Product'
+        }
+        description={
+          statusAction === 'approve'
+            ? 'Approving this product will publish it to the catalog and make it available for purchase.'
+            : statusAction === 'suspend'
+              ? 'Are you sure you want to suspend this product? It will be removed from the catalog until reactivated.'
+              : 'Reactivating this product will restore it to the catalog and make it available for purchase again.'
+        }
+        iconType={statusAction === 'suspend' ? 'error' : 'success'}
+        actions={[
+          { label: 'Cancel', onClick: closeStatusModal, variant: 'secondary' },
+          {
+            label:
+              statusAction === 'approve'
+                ? isApprovalLoading ? 'Approving...' : 'Approve'
+                : statusAction === 'suspend'
+                  ? isStatusLoading ? 'Suspending...' : 'Suspend'
+                  : isStatusLoading ? 'Reactivating...' : 'Reactivate',
+            onClick: handleConfirmStatusAction,
+            variant: statusAction === 'suspend' ? 'danger' : 'primary',
+            disabled: isApprovalLoading || isStatusLoading,
           },
         ]}
       />

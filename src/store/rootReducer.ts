@@ -8,6 +8,7 @@ import { vendorSlice } from './features/vendor/vendorSlice'
 import { teamSlice } from './features/team/teamSlice'
 import { userSlice } from './features/user/userSlice'
 import { orderSlice } from './features/order'
+import { withdrawalSlice } from './features/withdrawal/withdrawalSlice'
 import authReducer from './features/auth/authReducer'
 
 const rootReducer = combineReducers({
@@ -20,6 +21,7 @@ const rootReducer = combineReducers({
   [teamSlice.reducerPath]: teamSlice.reducer,
   [userSlice.reducerPath]: userSlice.reducer,
   [orderSlice.reducerPath]: orderSlice.reducer,
+  [withdrawalSlice.reducerPath]: withdrawalSlice.reducer,
   auth: authReducer,
 })
 

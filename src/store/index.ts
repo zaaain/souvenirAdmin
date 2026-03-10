@@ -10,6 +10,7 @@ import { vendorSlice } from './features/vendor/vendorSlice'
 import { teamSlice } from './features/team/teamSlice'
 import { userSlice } from './features/user/userSlice'
 import { orderSlice } from './features/order'
+import { withdrawalSlice } from './features/withdrawal/withdrawalSlice'
 import rootReducer from './rootReducer'
 
 const persistConfig = {
@@ -37,6 +38,7 @@ export const store = configureStore({
       teamSlice.middleware,
       userSlice.middleware,
       orderSlice.middleware,
+      withdrawalSlice.middleware,
     ),
 })
 

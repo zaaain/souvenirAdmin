@@ -61,7 +61,7 @@ function mapApiProductToDetail(raw: Record<string, unknown>): ProductDetailData 
   const stock = raw.stock ?? raw.inventory ?? raw.quantity ?? '—'
   const description = String(raw.description ?? '—')
   const priceRaw = raw.price ?? raw.unitPrice ?? raw.pricing ?? 0
-  const price = typeof priceRaw === 'number' ? `$${Number(priceRaw).toLocaleString()}` : String(priceRaw ?? '—')
+  const price = typeof priceRaw === 'number' ? `QAR ${Number(priceRaw).toLocaleString()}` : String(priceRaw ?? '—')
   const vat = raw.vat ?? raw.vatAmount ?? raw.tax ?? '—'
   const vatStr = typeof vat === 'number' ? `${vat}%` : String(vat)
   const discountType = String(raw.discountType ?? '—')
@@ -180,8 +180,48 @@ const ProductDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <TailSpin visible height={60} width={60} color="#2466D0" ariaLabel="Loading product" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="shrink-0 w-[100px] h-[100px] rounded-full border-2 border-gray-200 bg-gray-100 animate-pulse" />
+            <div className="min-w-0 space-y-2">
+              <div className="h-5 w-40 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-24 bg-gray-100 rounded-full animate-pulse" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <div className="h-10 w-24 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="h-10 w-28 bg-gray-100 rounded-lg animate-pulse" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <div className="h-4 w-32 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <div className="h-3 w-24 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-32 bg-gray-100 rounded-lg animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 w-40 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-32 bg-gray-100 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <div className="h-4 w-32 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <div className="h-3 w-32 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-16 bg-gray-100 rounded-lg animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 w-56 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-40 bg-gray-100 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -311,6 +351,7 @@ const ProductDetail = () => {
           )
         })()}
       </div>
+
       <VendorInfoCard heading="Pricing" data={detail.pricing} />
       <VendorInfoCard heading="Shipping" data={detail.shipping} />
 

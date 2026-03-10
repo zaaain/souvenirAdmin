@@ -25,6 +25,9 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 export interface GetProductsParams {
   page?: number
   pageSize?: number
+  status?: string
+  vendorId?: string
+  text?: string
 }
 
 export const productSlice = createApi({
@@ -36,9 +39,13 @@ export const productSlice = createApi({
       query: (params: GetProductsParams = {}) => {
         const page = params?.page ?? 1
         const pageSize = params?.pageSize ?? 10
+        const queryParams: Record<string, string | number> = { page, pageSize }
+        if (params?.status) queryParams.status = params.status
+        if (params?.vendorId) queryParams.vendorId = params.vendorId
+        if (params?.text) queryParams.text = params.text
         return {
           url: 'admin/products',
-          params: { page, pageSize },
+          params: queryParams,
         }
       },
       providesTags: (result) => {

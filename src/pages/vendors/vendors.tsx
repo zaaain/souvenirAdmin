@@ -150,7 +150,12 @@ const Vendors = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteVendorId, setDeleteVendorId] = useState<string | null>(null)
 
-  const { data: apiResponse, isLoading } = useGetVendorsQuery({ page, pageSize })
+  const { data: apiResponse, isLoading } = useGetVendorsQuery({
+    page,
+    pageSize,
+    status: status === 'all' ? undefined : status.toLowerCase(),
+    text: search.trim() || undefined,
+  })
   const [deleteVendor, { isLoading: isDeleteLoading }] = useDeleteVendorMutation()
 
   const rawList = useMemo(() => {
@@ -173,33 +178,23 @@ const Vendors = () => {
   }, [apiResponse, rawList.length])
 
   const mappedList = useMemo(() => rawList.map(mapVendorToRow), [rawList])
-
   const filtered = useMemo(() => {
     let list = mappedList
-    if (status !== 'all') list = list.filter((r) => r.status === status)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        (r) =>
-          String(r.fullName).toLowerCase().includes(q) ||
-          String(r.email).toLowerCase().includes(q) ||
-          String(r.phone).toLowerCase().includes(q)
-      )
-    }
+    // dateJoined is currently client-side only; keep it as optional filter
     if (dateJoined) {
       list = list.filter((r) => String(r.dateJoinedRaw ?? '') === dateJoined)
     }
     return list
-  }, [mappedList, search, status, dateJoined])
+  }, [mappedList, dateJoined])
 
-  const total = status !== 'all' || search.trim() || dateJoined ? filtered.length : totalFromApi
+  const total = dateJoined ? filtered.length : totalFromApi
   const tableData = useMemo(() => {
-    if (status !== 'all' || search.trim() || dateJoined) {
+    if (dateJoined) {
       const start = (page - 1) * pageSize
       return filtered.slice(start, start + pageSize).map((r, i) => ({ ...r, rowNum: start + i + 1 }))
     }
     return mappedList.map((r, i) => ({ ...r, rowNum: (page - 1) * pageSize + i + 1 }))
-  }, [mappedList, filtered, page, pageSize, status, search, dateJoined])
+  }, [mappedList, filtered, page, pageSize, dateJoined])
 
   const columns = useMemo(
     () =>
@@ -214,7 +209,9 @@ const Vendors = () => {
     [navigate]
   )
 
-  const handleApply = () => setPage(1)
+  const handleApply = () => {
+    setPage(1)
+  }
   const handleClearAll = () => {
     setSearch('')
     setStatus('all')

@@ -23,6 +23,8 @@ export interface ModalProps {
   iconType?: ModalIconType
   /** Buttons in order (left to right). variant: secondary=outline, primary=blue, danger=red */
   actions?: ModalAction[]
+  /** Optional custom content rendered below description (e.g., inputs) */
+  children?: ReactNode
 }
 
 const iconMap: Record<ModalIconType, ReactNode> = {
@@ -58,7 +60,7 @@ const btnClass: Record<string, string> = {
   danger: 'px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 font-ManropeBold text-sm transition-colors',
 }
 
-function Modal({ isOpen, onClose, title, description, iconType, actions = [] }: ModalProps) {
+function Modal({ isOpen, onClose, title, description, iconType, actions = [], children }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -93,6 +95,11 @@ function Modal({ isOpen, onClose, title, description, iconType, actions = [] }: 
         {description != null && (
           <div className="mt-2 text-left text-sm font-Manrope text-gray-600">
             {description}
+          </div>
+        )}
+        {children && (
+          <div className="mt-4">
+            {children}
           </div>
         )}
         {actions.length > 0 && (

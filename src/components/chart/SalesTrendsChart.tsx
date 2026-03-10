@@ -18,12 +18,12 @@ export interface SalesTrendsDataPoint {
 const DEFAULT_LINE_COLOR = '#2466D0'
 
 function formatYAxis(value: number): string {
-  if (value >= 1000) return `$${value / 1000}k`
-  return `$${value}`
+  if (value >= 1000) return `QAR ${value / 1000}k`
+  return `QAR ${value}`
 }
 
 function formatTooltipValue(value: number): string {
-  return `$${value.toLocaleString()}`
+  return `QAR ${value.toLocaleString()}`
 }
 
 interface SalesTrendsTooltipContentProps {

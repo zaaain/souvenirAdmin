@@ -5,8 +5,8 @@ import {
   PendingVendorApprovalsCard,
   VisitsByDeviceCard,
   UsersVisitsCard,
-  AgeDistributionCard,
-  ConversionRateCard,
+  // AgeDistributionCard,   // No API data — commented out
+  // ConversionRateCard,    // No API data — commented out
   SalesTrendsCard,
   RecentOrdersCard,
 } from '@components/card'
@@ -35,7 +35,11 @@ const STAT_CARDS_CONFIG: { id: string; heading: string; iconType: IconType; defa
 
 function formatRevenue(total: number): string {
   if (total == null || Number.isNaN(total)) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'QAR',
+    maximumFractionDigits: 0,
+  }).format(total)
 }
 
 function mapApiDataToStats(apiData: DashboardApiData | undefined, loading: boolean): DashboardStatItem[] {
@@ -52,22 +56,48 @@ function mapApiDataToStats(apiData: DashboardApiData | undefined, loading: boole
     }))
   }
   const { orders, revenue, vendors, users } = apiData
-  const values: string[] = [
-    String(orders?.total ?? '—'),
-    formatRevenue(revenue?.total ?? 0),
-    String(vendors?.approved ?? vendors?.total ?? '—'),
-    String(users?.total ?? '—'),
+  return [
+    {
+      id: '1',
+      heading: 'Total Orders',
+      value: String(orders?.total ?? '—'),
+      iconType: 'cube' as IconType,
+      comparisonPercentage: orders?.pending != null ? String(orders.pending) : '—',
+      comparisonText: 'pending orders',
+      comparisonTrend: 'positive' as ComparisonTrend,
+      loading: false,
+    },
+    {
+      id: '2',
+      heading: 'Revenue',
+      value: formatRevenue(revenue?.total ?? 0),
+      iconType: 'lineChart' as IconType,
+      comparisonPercentage: orders?.delivered != null ? String(orders.delivered) : '—',
+      comparisonText: 'orders delivered',
+      comparisonTrend: 'positive' as ComparisonTrend,
+      loading: false,
+    },
+    {
+      id: '3',
+      heading: 'Active Vendors',
+      value: String(vendors?.approved ?? vendors?.total ?? '—'),
+      iconType: 'storefront' as IconType,
+      comparisonPercentage: vendors?.pending != null ? String(vendors.pending) : '—',
+      comparisonText: 'pending approval',
+      comparisonTrend: 'positive' as ComparisonTrend,
+      loading: false,
+    },
+    {
+      id: '4',
+      heading: 'Total Users',
+      value: String(users?.total ?? '—'),
+      iconType: 'users' as IconType,
+      comparisonPercentage: users?.active != null ? String(users.active) : '—',
+      comparisonText: 'active users',
+      comparisonTrend: 'positive' as ComparisonTrend,
+      loading: false,
+    },
   ]
-  return STAT_CARDS_CONFIG.map((c, i) => ({
-    id: c.id,
-    heading: c.heading,
-    value: values[i] ?? '—',
-    iconType: c.iconType,
-    comparisonPercentage: '—',
-    comparisonText: c.defaultComparisonText,
-    comparisonTrend: 'positive' as ComparisonTrend,
-    loading: false,
-  }))
 }
 
 const CATEGORY_CHART_COLORS = { active: '#22C55E', inactive: '#6b7280' }
@@ -96,6 +126,16 @@ function mapRecentVendorsToItems(apiData: DashboardApiData | undefined): { id: s
     vendorName: [v.firstname, v.lastname].filter(Boolean).join(' ') || 'Vendor',
     submittedText: v.email || 'Pending',
   }))
+}
+
+function formatTimeAgo(dateStr: string | undefined): string {
+  if (!dateStr) return '—'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
 }
 
 type DashboardChartsData = {
@@ -174,9 +214,6 @@ const Dashboard = () => {
   const categoryChartData = useMemo(() => mapCategoriesToChartData(apiData), [apiData])
   const pendingVendorItems = useMemo(() => mapRecentVendorsToItems(apiData), [apiData])
 
-  const [conversionTab, setConversionTab] = useState(
-    CHARTS_DATA.analyticsCards?.conversionRate?.selectedTab ?? 'weekly'
-  )
   const [salesMonth, setSalesMonth] = useState(
     CHARTS_DATA.salesTrends?.selectedMonth ?? 'october'
   )
@@ -241,44 +278,107 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Top: Analytics — Visits by Device + Users Visits | Age Distribution | Conversion Rate */}
+      {/* Analytics — Visits by Device | Users Visits (dynamic: users.total) */}
+      {/* AgeDistributionCard — commented out (no API data) */}
+      {/* ConversionRateCard  — commented out (no API data) */}
       <div className="grid grid-cols-12 gap-4 md:gap-6 items-stretch">
-        <div className="col-span-12 md:col-span-4 flex flex-col gap-4 min-h-0">
+        <div className="col-span-12 md:col-span-8 min-h-0 flex">
           <VisitsByDeviceCard
             title={CHARTS_DATA.analyticsCards.visitsByDevice.title}
             subtitle={CHARTS_DATA.analyticsCards.visitsByDevice.subtitle}
             items={CHARTS_DATA.analyticsCards.visitsByDevice.items as VisitsByDeviceItem[]}
             loading={dashboardLoading}
           />
-          <div className="flex-1 min-h-0 flex">
-            <UsersVisitsCard
-              title={CHARTS_DATA.analyticsCards.usersVisits.title}
-              subtitle={CHARTS_DATA.analyticsCards.usersVisits.subtitle}
-              value={usersVisitValue}
-              loading={dashboardLoading}
-              fillHeight
-            />
-          </div>
         </div>
         <div className="col-span-12 md:col-span-4 min-h-0 flex">
-          <AgeDistributionCard
-            title={CHARTS_DATA.analyticsCards.ageDistribution.title}
-            subtitle={CHARTS_DATA.analyticsCards.ageDistribution.subtitle}
-            data={CHARTS_DATA.analyticsCards.ageDistribution.data}
+          <UsersVisitsCard
+            title={CHARTS_DATA.analyticsCards.usersVisits.title}
+            subtitle={CHARTS_DATA.analyticsCards.usersVisits.subtitle}
+            value={usersVisitValue}
             loading={dashboardLoading}
+            fillHeight
           />
         </div>
-        <div className="col-span-12 md:col-span-4 min-h-0 flex">
-          <ConversionRateCard
-            title={CHARTS_DATA.analyticsCards.conversionRate.title}
-            subtitle={CHARTS_DATA.analyticsCards.conversionRate.subtitle}
-            tabs={CHARTS_DATA.analyticsCards.conversionRate.tabs}
-            selectedTab={conversionTab}
-            onTabChange={setConversionTab}
-            centerLabel={CHARTS_DATA.analyticsCards.conversionRate.centerLabel}
-            data={CHARTS_DATA.analyticsCards.conversionRate.data}
-            loading={dashboardLoading}
-          />
+      </div>
+
+      {/* Recent Activities — Users & Products from API */}
+      <div className="grid grid-cols-12 gap-4 md:gap-6">
+        {/* Recent Users */}
+        <div className="col-span-12 md:col-span-6 bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-base font-ManropeBold text-gray-800 mb-4">Recent Users</h3>
+          {dashboardLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((k) => (
+                <div key={k} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-2 w-20 bg-gray-100 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (apiData?.recentActivities?.users ?? []).length === 0 ? (
+            <p className="text-sm text-gray-400">No recent users</p>
+          ) : (
+            <ul className="space-y-3">
+              {(apiData?.recentActivities?.users ?? []).map((u) => {
+                const name = [u.firstname, u.lastname].filter(Boolean).join(' ') || 'User'
+                const initial = name.charAt(0).toUpperCase()
+                return (
+                  <li key={u._id} className="flex items-center gap-3">
+                    <span className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-ManropeBold flex items-center justify-center">
+                      {initial}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-Manrope text-gray-800 truncate">{name}</p>
+                      <p className="text-xs text-gray-400">{formatTimeAgo(u.createdAt)}</p>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Recent Products */}
+        <div className="col-span-12 md:col-span-6 bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-base font-ManropeBold text-gray-800 mb-4">Recent Products</h3>
+          {dashboardLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((k) => (
+                <div key={k} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-gray-100 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-3 w-40 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-2 w-24 bg-gray-100 rounded animate-pulse" />
+                  </div>
+                  <div className="h-5 w-16 bg-gray-100 rounded-full animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : (apiData?.recentActivities?.products ?? []).length === 0 ? (
+            <p className="text-sm text-gray-400">No recent products</p>
+          ) : (
+            <ul className="space-y-3">
+              {(apiData?.recentActivities?.products ?? []).map((p) => (
+                <li key={p._id} className="flex items-center gap-3">
+                  <span className="shrink-0 w-8 h-8 rounded border border-red-200 bg-red-50 text-red-500 flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-Manrope text-gray-800 truncate">{p.name}</p>
+                    <p className="text-xs text-gray-400">QAR {p.price} · {formatTimeAgo(p.createdAt)}</p>
+                  </div>
+                  <span className="shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-Manrope bg-primary/10 text-primary capitalize">
+                    {p.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 

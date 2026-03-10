@@ -61,7 +61,7 @@ function mapOrderRow(raw: Record<string, unknown>, rowIndex: number): Record<str
   const totalAmountRaw = raw.totalAmount ?? raw.total ?? raw.amount ?? 0
   const totalAmount =
     typeof totalAmountRaw === 'number'
-      ? `$${Number(totalAmountRaw).toLocaleString()}`
+      ? `QAR ${Number(totalAmountRaw).toLocaleString()}`
       : String(totalAmountRaw ?? '')
 
   const paymentMethodRaw = String(raw.paymentMethod ?? raw.paymentMode ?? '')
@@ -169,10 +169,11 @@ const Orders = () => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE)
 
   const { data: apiResponse, isLoading, isError, error } = useGetOrdersQuery({
     page,
-    pageSize: ITEMS_PER_PAGE,
+    pageSize,
     status: status === 'all' ? undefined : status,
     text: search.trim() || undefined,
   })
@@ -194,7 +195,7 @@ const Orders = () => {
     return rawList.length
   }, [apiResponse, rawList.length])
 
-  const start = (page - 1) * ITEMS_PER_PAGE
+  const start = (page - 1) * pageSize
   const tableData = useMemo(
     () => rawList.map((r, i) => mapOrderRow(r, start + i)),
     [rawList, page],
@@ -203,6 +204,10 @@ const Orders = () => {
   const columns = useMemo(() => buildColumns((id) => navigate(`/orders/${id}`)), [navigate])
 
   const handleApply = () => setPage(1)
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
   const handleExport = () => {
     // TODO: implement export
   }
@@ -252,9 +257,10 @@ const Orders = () => {
         headers={columns}
         data={tableData}
         currentPage={page}
-        itemsPerPage={ITEMS_PER_PAGE}
+        itemsPerPage={pageSize}
         totalResults={total}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         loading={isLoading}
       />
     </div>

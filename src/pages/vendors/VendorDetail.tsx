@@ -1,11 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { TailSpin } from 'react-loader-spinner'
 import { VendorInfoCard } from '@components/card'
 import type { VendorInfoCardItem } from '@components/card'
 import { Modal } from '@components/modal'
-import { SimpleTable } from '@components/table'
-import type { TableColumn } from '@components/table'
 import { useGetVendorByIdQuery, useUpdateVendorApprovalMutation, useUpdateVendorStatusMutation, useDeleteVendorMutation } from '@store/features/vendor'
 import { eSnack, sSnack } from '@hooks/useToast'
 
@@ -42,7 +39,6 @@ function mapApiVendorToDetail(raw: Record<string, unknown>): VendorDetailData {
   const s = String(statusRaw)
   const status = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
   const email = raw.email != null && raw.email !== '' ? String(raw.email) : NA
-  const phone = raw.phone != null && raw.phone !== '' ? String(raw.phone) : NA
   return {
     fullName,
     status,
@@ -58,17 +54,43 @@ function mapApiVendorToDetail(raw: Record<string, unknown>): VendorDetailData {
       { label: 'Business Address', value: raw.businessAddress != null && raw.businessAddress !== '' ? String(raw.businessAddress) : NA, colSpan: 3 },
     ],
     primaryContact: [
-      { label: 'Primary Contact', value: fullName !== NA ? fullName : NA },
-      { label: 'Contact Email', value: email },
-      { label: 'Phone Number', value: phone },
+      { label: 'Primary Contact Name', value: fullName !== NA ? fullName : NA },
+      { label: 'Email', value: email },
     ],
     bankPayout: [
-      { label: 'Bank Name', value: raw.bankName != null && raw.bankName !== '' ? String(raw.bankName) : NA },
-      { label: 'Account Holder Name', value: raw.accountHolderName != null && raw.accountHolderName !== '' ? String(raw.accountHolderName) : NA },
-      { label: 'Account Number', value: raw.accountNumber != null && raw.accountNumber !== '' ? String(raw.accountNumber) : NA },
-      { label: 'Routing Number', value: raw.routingNumber != null && raw.routingNumber !== '' ? String(raw.routingNumber) : NA },
-      { label: 'Account Type', value: raw.accountType != null && raw.accountType !== '' ? String(raw.accountType) : NA },
-      { label: 'Currency', value: raw.currency != null && raw.currency !== '' ? String(raw.currency) : NA },
+      // Support nested bankDetails from API response
+      {
+        label: 'Bank Name',
+        value:
+          (raw.bankDetails as Record<string, unknown> | undefined)?.bankName != null &&
+          String((raw.bankDetails as Record<string, unknown>).bankName) !== ''
+            ? String((raw.bankDetails as Record<string, unknown>).bankName)
+            : raw.bankName != null && raw.bankName !== '' ? String(raw.bankName) : NA,
+      },
+      {
+        label: 'Account Holder Name',
+        value:
+          (raw.bankDetails as Record<string, unknown> | undefined)?.accountHolderName != null &&
+          String((raw.bankDetails as Record<string, unknown>).accountHolderName) !== ''
+            ? String((raw.bankDetails as Record<string, unknown>).accountHolderName)
+            : raw.accountHolderName != null && raw.accountHolderName !== '' ? String(raw.accountHolderName) : NA,
+      },
+      {
+        label: 'Account Number',
+        value:
+          (raw.bankDetails as Record<string, unknown> | undefined)?.accountNumber != null &&
+          String((raw.bankDetails as Record<string, unknown>).accountNumber) !== ''
+            ? String((raw.bankDetails as Record<string, unknown>).accountNumber)
+            : raw.accountNumber != null && raw.accountNumber !== '' ? String(raw.accountNumber) : NA,
+      },
+      {
+        label: 'Account Type',
+        value:
+          (raw.bankDetails as Record<string, unknown> | undefined)?.accountType != null &&
+          String((raw.bankDetails as Record<string, unknown>).accountType) !== ''
+            ? String((raw.bankDetails as Record<string, unknown>).accountType)
+            : raw.accountType != null && raw.accountType !== '' ? String(raw.accountType) : NA,
+      },
     ],
     documents: Array.isArray(raw.documents)
       ? (raw.documents as { documentName?: string; documentNumber?: string; link?: string; expiryDate?: string }[]).map((d) => ({
@@ -142,8 +164,41 @@ const VendorDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <TailSpin visible height={60} width={60} color="#2466D0" ariaLabel="Loading vendor" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="shrink-0 w-[100px] h-[100px] rounded-full border-2 border-gray-200 bg-gray-100 animate-pulse" />
+            <div className="min-w-0 space-y-2">
+              <div className="h-6 w-56 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-4 w-28 bg-gray-100 rounded-full animate-pulse" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <div className="h-10 w-28 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="h-10 w-32 bg-gray-100 rounded-lg animate-pulse" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((k) => (
+            <div key={k} className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm min-h-[150px]">
+              <div className="h-4 w-28 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-7 w-24 bg-gray-100 rounded-lg animate-pulse mt-4" />
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <div className="h-4 w-44 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-4">
+            {[1, 2, 3].map((k) => (
+              <div key={k} className="space-y-2">
+                <div className="h-3 w-24 bg-gray-100 rounded-lg animate-pulse" />
+                <div className="h-4 w-40 bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -164,38 +219,7 @@ const VendorDetail = () => {
 
   const statusClass = STATUS_PILL[detail.status] ?? 'bg-gray-100 text-gray-600'
 
-  const docColumns: TableColumn[] = [
-    { key: 'rowNum', label: '#' },
-    { key: 'documentName', label: 'Document Name' },
-    { key: 'documentNumber', label: 'Document Number' },
-    {
-      key: 'link',
-      label: 'Link',
-      render: (v) => (
-        <a href={String(v)} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate block max-w-[200px]">
-          {String(v)}
-        </a>
-      ),
-    },
-    { key: 'expiryDate', label: 'Expiry Date' },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_, row) => (
-        <button
-          type="button"
-          onClick={() => console.log('Download', row)}
-          className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/5 rounded"
-          aria-label="Download"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-        </button>
-      ),
-    },
-  ]
-  const docData = detail.documents.map((d, i) => ({ ...d, rowNum: i + 1 }))
+  // Documents & Verification section removed as per requirement
 
   const handleApprove = async () => {
     if (!id) return
@@ -391,14 +415,13 @@ const VendorDetail = () => {
         />
       </div>
 
-      <VendorInfoCard heading="Business Information" data={detail.business} />
+      {/* <VendorInfoCard heading="Business Information" data={detail.business} /> */}
       <VendorInfoCard heading="Primary Contact Information" data={detail.primaryContact} />
       <VendorInfoCard heading="Bank & Payout Details" data={detail.bankPayout} />
-
-      <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+      {/* <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
         <h3 className="text-base font-ManropeBold text-gray-800 mb-4">Documents & Verification</h3>
         <SimpleTable headers={docColumns} data={docData} />
-      </div>
+      </div> */}
 
       <Modal
         isOpen={rejectModalOpen}
