@@ -208,10 +208,7 @@ const Orders = () => {
     setPageSize(size)
     setPage(1)
   }
-  const handleExport = () => {
-    // TODO: implement export
-  }
-  const handleClearAll = () => {
+const handleClearAll = () => {
     setSearch('')
     setStatus('all')
     setPage(1)

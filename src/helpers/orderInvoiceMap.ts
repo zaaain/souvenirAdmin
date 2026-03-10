@@ -66,7 +66,7 @@ export function mapOrderToUi(apiOrder: VendorOrderDetail | null | undefined): Re
         }
       })
     : []
-  const steps = (apiOrder.trackingSteps ?? []).map((s) => ({
+  const steps = (apiOrder.trackingSteps ?? []).map((s: { status?: string; date?: string; time?: string }) => ({
     status: (s.status ?? '') as OrderStatus,
     date: s.date ?? '',
     time: s.time ?? '',
