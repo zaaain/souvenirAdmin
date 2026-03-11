@@ -97,11 +97,16 @@ export const orderSlice = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Orders', id }, { type: 'Orders', id: 'LIST' }],
     }),
     approveDelivery: builder.mutation({
-      query: (id: string) => ({
-        url: `admin/orders/${id}/approve-delivery`,
-        method: 'PUT',
-      }),
-      invalidatesTags: (_result, _error, id) => [{ type: 'Orders', id }, { type: 'Orders', id: 'LIST' }],
+      query: ({ id, file }: { id: string; file: File }) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        return {
+          url: `admin/orders/${id}/approve-delivery`,
+          method: 'PUT',
+          body: formData,
+        }
+      },
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Orders', id }, { type: 'Orders', id: 'LIST' }],
     }),
     deleteOrder: builder.mutation({
       query: (id: string) => ({

@@ -12,4 +12,5 @@ export type {
   RecentActivityProduct,
   RecentActivityUser,
   RecentActivityVendor,
+  RecentActivityOrder,
 } from './dashboardSlice'

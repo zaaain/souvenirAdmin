@@ -3,17 +3,20 @@ import {
   DashboardCard,
   CategoryPerformanceCard,
   PendingVendorApprovalsCard,
-  VisitsByDeviceCard,
-  UsersVisitsCard,
-  // AgeDistributionCard,   // No API data — commented out
-  // ConversionRateCard,    // No API data — commented out
+  // VisitsByDeviceCard,   // No API data — commented out
+  // UsersVisitsCard,      // No API data — commented out
+  // AgeDistributionCard,  // No API data — commented out
+  // ConversionRateCard,   // No API data — commented out
   SalesTrendsCard,
-  RecentOrdersCard,
 } from '@components/card'
-import type { IconType, ComparisonTrend, VisitsByDeviceItem } from '@components/card'
+import type { IconType, ComparisonTrend } from '@components/card'
 import { useGetDashboardQuery } from '@store/features/dashboard'
 import type { DashboardApiData } from '@store/features/dashboard'
 import dashboardChartsJson from '@/data/dashboardCharts.json'
+import { formatCurrency } from '@constants/currency'
+import moment from 'moment'
+import SimpleTable from '@components/table/SimpleTable'
+import type { TableColumn } from '@components/table/SimpleTable'
 
 export interface DashboardStatItem {
   id: string
@@ -217,7 +220,6 @@ const Dashboard = () => {
   const [salesMonth, setSalesMonth] = useState(
     CHARTS_DATA.salesTrends?.selectedMonth ?? 'october'
   )
-  const [recentOrdersPage, setRecentOrdersPage] = useState(1)
 
   const handleReview = (id: string) => {
     console.log('Review vendor:', id)
@@ -225,12 +227,47 @@ const Dashboard = () => {
 
   const cp = CHARTS_DATA.categoryPerformance
   const pv = CHARTS_DATA.pendingVendorApprovals
-  const ro = CHARTS_DATA.recentOrders
-  const ip = ro?.itemsPerPage ?? 10
-  const recentOrdersFull = ro?.data ?? []
-  const recentOrdersSliced = recentOrdersFull.slice((recentOrdersPage - 1) * ip, recentOrdersPage * ip).map((r, i) => ({ ...r, rowNum: (recentOrdersPage - 1) * ip + i + 1 }))
-  const ordersPendingCount = apiData?.orders?.pending ?? ro?.pendingCount ?? 0
-  const usersVisitValue = apiData?.users?.total != null ? String(apiData.users.total) : CHARTS_DATA.analyticsCards.usersVisits.value
+
+  const recentOrders = apiData?.recentActivities?.orders ?? []
+
+  const STATUS_COLORS: Record<string, string> = {
+    delivered: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    cancelled: 'bg-red-100 text-red-700',
+    processing: 'bg-blue-100 text-blue-700',
+    confirmed: 'bg-indigo-100 text-indigo-700',
+    shipped: 'bg-purple-100 text-purple-700',
+  }
+
+  const recentOrdersColumns: TableColumn[] = [
+    { key: 'orderId', label: 'Order ID' },
+    { key: 'customer', label: 'Customer' },
+    { key: 'amount', label: 'Amount' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value) => {
+        const s = String(value ?? '').toLowerCase()
+        const cls = STATUS_COLORS[s] ?? 'bg-gray-100 text-gray-600'
+        return (
+          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-Manrope capitalize ${cls}`}>
+            {String(value ?? '')}
+          </span>
+        )
+      },
+    },
+    { key: 'date', label: 'Date' },
+  ]
+
+  const recentOrdersRows = recentOrders.map((order) => ({
+    orderId: order.orderId || order._id,
+    customer: order.userId
+      ? [order.userId.firstname, order.userId.lastname].filter(Boolean).join(' ').trim() || '—'
+      : '—',
+    amount: formatCurrency(order.totalAmount),
+    status: order.status,
+    date: moment(order.createdAt).format('DD/MM/YY'),
+  }))
 
   return (
     <div className="space-y-6">
@@ -278,34 +315,19 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Analytics — Visits by Device | Users Visits (dynamic: users.total) */}
+      {/* VisitsByDeviceCard — commented out (no API data) */}
+      {/* UsersVisitsCard    — commented out (no API data) */}
       {/* AgeDistributionCard — commented out (no API data) */}
       {/* ConversionRateCard  — commented out (no API data) */}
-      <div className="grid grid-cols-12 gap-4 md:gap-6 items-stretch">
-        <div className="col-span-12 md:col-span-8 min-h-0 flex">
-          <VisitsByDeviceCard
-            title={CHARTS_DATA.analyticsCards.visitsByDevice.title}
-            subtitle={CHARTS_DATA.analyticsCards.visitsByDevice.subtitle}
-            items={CHARTS_DATA.analyticsCards.visitsByDevice.items as VisitsByDeviceItem[]}
-            loading={dashboardLoading}
-          />
-        </div>
-        <div className="col-span-12 md:col-span-4 min-h-0 flex">
-          <UsersVisitsCard
-            title={CHARTS_DATA.analyticsCards.usersVisits.title}
-            subtitle={CHARTS_DATA.analyticsCards.usersVisits.subtitle}
-            value={usersVisitValue}
-            loading={dashboardLoading}
-            fillHeight
-          />
-        </div>
-      </div>
 
       {/* Recent Activities — Users & Products from API */}
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* Recent Users */}
         <div className="col-span-12 md:col-span-6 bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-          <h3 className="text-base font-ManropeBold text-gray-800 mb-4">Recent Users</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-ManropeBold text-gray-800">Recent Users</h3>
+            <a href="/users" className="text-sm text-primary font-Manrope hover:underline">See All</a>
+          </div>
           {dashboardLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((k) => (
@@ -343,7 +365,10 @@ const Dashboard = () => {
 
         {/* Recent Products */}
         <div className="col-span-12 md:col-span-6 bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-          <h3 className="text-base font-ManropeBold text-gray-800 mb-4">Recent Products</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-ManropeBold text-gray-800">Recent Products</h3>
+            <a href="/products" className="text-sm text-primary font-Manrope hover:underline">See All</a>
+          </div>
           {dashboardLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((k) => (
@@ -396,20 +421,20 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Recent Orders — table with pagination (below Sales Trends) */}
-      {ro && (
-        <RecentOrdersCard
-          title={ro.title}
-          pendingCount={ordersPendingCount}
-          seeAllHref={ro.seeAllHref}
-          data={recentOrdersSliced}
-          currentPage={recentOrdersPage}
-          itemsPerPage={ip}
-          totalResults={recentOrdersFull.length}
-          onPageChange={setRecentOrdersPage}
-          loading={dashboardLoading}
-        />
-      )}
+      {/* Recent Orders — SimpleTable from API */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="text-base font-ManropeBold text-gray-800">Recent Orders</h3>
+          <a href="/orders" className="text-sm text-primary font-Manrope hover:underline">See All</a>
+        </div>
+        <div className="p-5">
+          <SimpleTable
+            headers={recentOrdersColumns}
+            data={recentOrdersRows}
+            loading={dashboardLoading}
+          />
+        </div>
+      </div>
     </div>
   )
 }

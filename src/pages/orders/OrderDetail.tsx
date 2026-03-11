@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { OrderTrackingStepper, type OrderTrackingStep } from '@components/order'
 import { Modal } from '@components/modal'
@@ -8,6 +8,7 @@ import {
   useGetOrderByIdQuery,
   useUpdateOrderStatusMutation,
   useDeleteOrderMutation,
+  useApproveDeliveryMutation,
 } from '@store/features/order'
 import { useAppSelector } from '@hooks/redux'
 import { selectProfileData } from '@store/features/auth/authReducer'
@@ -22,6 +23,16 @@ import Logo from '@assets/svg/logo.svg'
 /** Order status keys used by API: pending, confirmed, processing, shipped, delivered, cancelled */
 const ORDER_STATUS_VALUES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'] as const
 
+/** Step-by-step: only allow the next logical status from current */
+const NEXT_STATUS_MAP: Record<string, string[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: [],
+}
+
 const STATUS_PILL: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',
   confirmed: 'bg-blue-100 text-blue-600',
@@ -31,10 +42,6 @@ const STATUS_PILL: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-600',
 }
 
-const ORDER_STATUS_OPTIONS = ORDER_STATUS_VALUES.map((v) => ({
-  value: v,
-  label: v.charAt(0).toUpperCase() + v.slice(1),
-}))
 
 function OrderDetail() {
   const { id } = useParams<{ id: string }>()
@@ -42,11 +49,14 @@ function OrderDetail() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [updateStatusModalOpen, setUpdateStatusModalOpen] = useState(false)
   const [updateStatusSelect, setUpdateStatusSelect] = useState('')
+  const [isApprovingDelivery, setIsApprovingDelivery] = useState(false)
+  const deliveryFileRef = useRef<HTMLInputElement>(null)
 
   const profileData = useAppSelector(selectProfileData)
   const { data, isLoading, isError, error } = useGetOrderByIdQuery(id!, { skip: !id })
   const [updateOrderStatus, { isLoading: isUpdatingStatus }] = useUpdateOrderStatusMutation()
   const [deleteOrder, { isLoading: isCancelling }] = useDeleteOrderMutation()
+  const [approveDelivery] = useApproveDeliveryMutation()
 
   const orderData = useMemo(() => mapOrderToUi(data?.data), [data?.data])
   const status = orderData.status as string
@@ -82,10 +92,42 @@ function OrderDetail() {
     }
   }
 
+  const allowedNextStatuses = NEXT_STATUS_MAP[(status ?? '').toLowerCase()] ?? []
+  const allowedStatusOptions = ORDER_STATUS_VALUES
+    .filter((v) => allowedNextStatuses.includes(v))
+    .map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }))
+
   const openUpdateStatusModal = () => {
-    const current = (status ?? '').toString().toLowerCase()
-    setUpdateStatusSelect(ORDER_STATUS_VALUES.includes(current as typeof ORDER_STATUS_VALUES[number]) ? current : 'pending')
+    setUpdateStatusSelect(allowedStatusOptions[0]?.value ?? '')
     setUpdateStatusModalOpen(true)
+  }
+
+  const handleDeliveryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !id) return
+    setIsApprovingDelivery(true)
+    try {
+      const result = await approveDelivery({ id, file }).unwrap()
+      sSnack(result?.message ?? 'Delivery proof uploaded successfully')
+      const updatedOrder = result?.data ?? data?.data
+      if (updatedOrder) {
+        const uiOrder = mapOrderToUi(updatedOrder)
+        try {
+          const logoDataUrl = await loadLogoAsDataUrl(Logo)
+          downloadInvoicePdf(uiOrder, vendorName, vendorEmail, logoDataUrl)
+        } catch {
+          downloadInvoicePdf(uiOrder, vendorName, vendorEmail, '')
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'data' in err
+        ? String((err as { data?: { message?: string } }).data?.message ?? 'Failed to upload delivery proof')
+        : 'Failed to upload delivery proof'
+      eSnack(msg)
+    } finally {
+      setIsApprovingDelivery(false)
+      if (deliveryFileRef.current) deliveryFileRef.current.value = ''
+    }
   }
 
   const handleUpdateStatus = async () => {
@@ -185,13 +227,15 @@ function OrderDetail() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 7h12M10 11v6m4-6v6M9 7l1-2h4l1 2m2 0v11a2 2 0 01-2 2H8a2 2 0 01-2-2V7z" />
                 </svg>
               </button>
-              <button
-                type="button"
-                onClick={openUpdateStatusModal}
-                className="px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-Manrope hover:bg-gray-700 transition-colors"
-              >
-                Update Status
-              </button>
+              {allowedStatusOptions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={openUpdateStatusModal}
+                  className="px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-Manrope hover:bg-gray-700 transition-colors"
+                >
+                  Update Status
+                </button>
+              )}
             </>
           )}
         </div>
@@ -264,6 +308,7 @@ function OrderDetail() {
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-lg font-ManropeBold text-gray-800 mb-4">Document</h2>
             <div className="space-y-4">
+              {/* Invoice - always visible */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,26 +327,45 @@ function OrderDetail() {
                   </svg>
                 </button>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+
+              {/* Delivery Proof - only when status is delivered */}
+              {status?.toLowerCase() === 'delivered' && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-sm font-ManropeBold text-gray-800">Delivery Proof</p>
+                  </div>
                   <div>
-                    <p className="text-sm font-ManropeBold text-gray-800">
-                      {(orderData.deliveryProof as Record<string, unknown>)?.fileName as string}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {(orderData.deliveryProof as Record<string, unknown>)?.status as string}
-                    </p>
+                    <input
+                      ref={deliveryFileRef}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={handleDeliveryFileChange}
+                      disabled={isApprovingDelivery}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => deliveryFileRef.current?.click()}
+                      disabled={isApprovingDelivery}
+                      className="p-2 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
+                      aria-label="Upload delivery proof"
+                    >
+                      {isApprovingDelivery ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
-                <button type="button" className="p-2 text-primary hover:bg-primary/10 rounded transition-colors" aria-label="Upload">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -396,7 +460,7 @@ function OrderDetail() {
               label="Status"
               value={updateStatusSelect}
               onValueChange={setUpdateStatusSelect}
-              options={ORDER_STATUS_OPTIONS}
+              options={allowedStatusOptions}
               placeholder="Select status"
               rounded="lg"
             />

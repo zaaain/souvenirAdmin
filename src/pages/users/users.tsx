@@ -79,7 +79,6 @@ function buildColumns(onView: (id: string) => void, onDelete: (id: string) => vo
     },
     { key: 'phone', label: 'Phone Number' },
     { key: 'totalOrders', label: 'Total Orders' },
-    { key: 'lastOrder', label: 'Last Order' },
     {
       key: 'status',
       label: 'Status',

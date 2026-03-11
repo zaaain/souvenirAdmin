@@ -53,7 +53,6 @@ function buildColumns(
       ),
     },
     { key: 'email', label: 'Email' },
-    { key: 'revenue', label: 'Revenue' },
     { key: 'dateJoined', label: 'Date Joined' },
     {
       key: 'status',

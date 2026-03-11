@@ -1,4 +1,4 @@
-import "./chunk-DC5AMYBS.js";
+import "./chunk-2TUXWMP5.js";
 
 // node_modules/html2canvas/dist/html2canvas.esm.js
 var extendStatics = function(d, b) {
@@ -7805,4 +7805,4 @@ html2canvas/dist/html2canvas.esm.js:
   PERFORMANCE OF THIS SOFTWARE.
   ***************************************************************************** *)
 */
-//# sourceMappingURL=html2canvas.esm-2FYPGI4K.js.map
+//# sourceMappingURL=html2canvas.esm-CQDUF2CI.js.map

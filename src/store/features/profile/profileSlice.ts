@@ -45,7 +45,7 @@ export const profileSlice = createApi({
       providesTags: ['Profile'],
     }),
     updateProfile: builder.mutation({
-      query: (body: { 
+      query: (body: {
         fullName?: string
         email?: string
         phone?: string
@@ -58,12 +58,25 @@ export const profileSlice = createApi({
       }),
       invalidatesTags: ['Profile'],
     }),
+    uploadProfilePicture: builder.mutation({
+      query: (file: File) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        return {
+          url: 'admin/profile/avatar',
+          method: 'PUT',
+          body: formData,
+        }
+      },
+      invalidatesTags: ['Profile'],
+    }),
   }),
 })
 
 // Export hooks for usage in functional components
-export const { 
-  useGetProfileQuery, 
+export const {
+  useGetProfileQuery,
   useLazyGetProfileQuery,
-  useUpdateProfileMutation 
+  useUpdateProfileMutation,
+  useUploadProfilePictureMutation,
 } = profileSlice

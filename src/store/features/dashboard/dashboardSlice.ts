@@ -81,10 +81,22 @@ export interface RecentActivityVendor {
   lastname: string
 }
 
+export interface RecentActivityOrder {
+  _id: string
+  orderId: string
+  userId: { _id: string; firstname: string; lastname: string } | null
+  vendorId: { _id: string; firstname: string; lastname: string } | null
+  totalAmount: number
+  status: string
+  paymentStatus: string
+  createdAt: string
+}
+
 export interface DashboardRecentActivities {
   products: RecentActivityProduct[]
   users: RecentActivityUser[]
   vendors: RecentActivityVendor[]
+  orders: RecentActivityOrder[]
 }
 
 export interface DashboardApiData {

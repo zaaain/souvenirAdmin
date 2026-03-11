@@ -78,7 +78,8 @@ function PendingVendorApprovalsCard({
             </div>
             <p className="font-ManropeBold text-gray-800 truncate">{item.vendorName}</p>
             <p className="text-xs font-Manrope text-gray-500 mt-0.5">{item.submittedText}</p>
-            <div className="mt-3 flex justify-end">
+            {/* Review button — commented out */}
+            {/* <div className="mt-3 flex justify-end">
               <button
                 type="button"
                 onClick={() => onReview?.(item.id)}
@@ -86,7 +87,7 @@ function PendingVendorApprovalsCard({
               >
                 Review
               </button>
-            </div>
+            </div> */}
           </div>
         ))}
       </div>

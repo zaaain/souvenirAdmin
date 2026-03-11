@@ -1,5 +1,36 @@
+import moment from 'moment'
 import type { OrderStatus, OrderTrackingStep } from '@components/order'
 import { formatCurrency } from '@constants/currency'
+
+const TRACKING_STATUS_ORDER = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'] as const
+
+/** Build tracking steps from createdAt (for pending) + statusHistory (for rest) */
+function buildTrackingSteps(
+  createdAt: string,
+  statusHistory: Record<string, unknown>[],
+): OrderTrackingStep[] {
+  return TRACKING_STATUS_ORDER.map((s) => {
+    if (s === 'pending') {
+      return {
+        status: 'pending' as OrderStatus,
+        date: createdAt ? moment(createdAt).format('DD/MM/YY') : '',
+        time: createdAt ? moment(createdAt).format('HH:mm') : '',
+      }
+    }
+    const entry = statusHistory.find(
+      (h) => String(h.status ?? '').toLowerCase() === s,
+    )
+    if (entry) {
+      const ts = String(entry.timestamp ?? entry.createdAt ?? entry.changedAt ?? entry.date ?? '')
+      return {
+        status: s as OrderStatus,
+        date: ts ? moment(ts).format('DD/MM/YY') : '',
+        time: ts ? moment(ts).format('HH:mm') : '',
+      }
+    }
+    return { status: s as OrderStatus, date: '', time: '' }
+  })
+}
 
 type VendorOrderDetail = Record<string, any>
 
@@ -66,11 +97,9 @@ export function mapOrderToUi(apiOrder: VendorOrderDetail | null | undefined): Re
         }
       })
     : []
-  const steps = (apiOrder.trackingSteps ?? []).map((s: { status?: string; date?: string; time?: string }) => ({
-    status: (s.status ?? '') as OrderStatus,
-    date: s.date ?? '',
-    time: s.time ?? '',
-  })) as OrderTrackingStep[]
+  const createdAt = String(apiOrder.createdAt ?? '')
+  const statusHistory = Array.isArray(apiOrder.statusHistory) ? apiOrder.statusHistory as Record<string, unknown>[] : []
+  const steps = buildTrackingSteps(createdAt, statusHistory)
   const userId = apiOrder.userId
   const customerName = (apiOrder as Record<string, unknown>).customerName ?? (apiOrder as Record<string, unknown>).customer
     ?? (userId ? `${String(userId.firstname ?? '').trim()} ${String(userId.lastname ?? '').trim()}`.trim() : null) ?? '—'
@@ -88,7 +117,7 @@ export function mapOrderToUi(apiOrder: VendorOrderDetail | null | undefined): Re
     orderItems,
     subtotal: apiOrder.totalAmount != null ? formatCurrency(apiOrder.totalAmount) : (typeof (apiOrder as Record<string, unknown>).subtotal === 'number' ? formatCurrency((apiOrder as Record<string, unknown>).subtotal as number) : '—'),
     deliveryFee: apiOrder.shippingCost != null ? formatCurrency(apiOrder.shippingCost) : (typeof (apiOrder as Record<string, unknown>).deliveryFee === 'number' ? formatCurrency((apiOrder as Record<string, unknown>).deliveryFee as number) : '—'),
-    trackingSteps: steps.length ? steps : [{ status: toOrderStatus(apiOrder.status), date: '', time: '' }],
+    trackingSteps: steps,
     invoice: apiOrder.invoice ?? { fileName: 'Invoice', size: '—', generatedDate: '—' },
     deliveryProof: apiOrder.deliveryProof ?? { fileName: 'Delivery Proof', status: '—' },
   }

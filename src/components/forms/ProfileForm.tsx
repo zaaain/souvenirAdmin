@@ -2,8 +2,10 @@ import React, { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { Input } from '@components/formsInput'
 import { Button } from '@components/buttons'
-import { useAppSelector } from '@hooks/redux'
-import { selectProfileData } from '@store/features/auth/authReducer'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { selectProfileData, selectToken, setProfileData } from '@store/features/auth/authReducer'
+import { useUploadProfilePictureMutation, useLazyGetProfileQuery } from '@store/features/profile/profileSlice'
+import { eSnack, sSnack } from '@hooks/useToast'
 
 interface ProfileFormData {
   fullName: string
@@ -13,16 +15,20 @@ interface ProfileFormData {
 }
 
 const ProfileForm = () => {
+  const dispatch = useAppDispatch()
   const profileData = useAppSelector(selectProfileData)
+  const token = useAppSelector(selectToken)
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [uploadProfilePicture, { isLoading: isUploading }] = useUploadProfilePictureMutation()
+  const [getProfile] = useLazyGetProfileQuery()
 
   const {
     control,
     formState: { errors },
   } = useForm<ProfileFormData>({
     defaultValues: {
-      fullName: profileData?.firstname && profileData?.lastname 
-        ? `${profileData.firstname} ${profileData.lastname}` 
+      fullName: profileData?.firstname && profileData?.lastname
+        ? `${profileData.firstname} ${profileData.lastname}`
         : '',
       email: profileData?.email || '',
       phone: '',
@@ -30,14 +36,34 @@ const ProfileForm = () => {
     },
   })
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setProfilePicture(reader.result as string)
+    if (!file) return
+
+    // Preview locally
+    const reader = new FileReader()
+    reader.onloadend = () => setProfilePicture(reader.result as string)
+    reader.readAsDataURL(file)
+
+    // Upload to API
+    try {
+      await uploadProfilePicture(file).unwrap()
+      sSnack('Profile picture updated successfully')
+      // Refresh profile in Redux store (same as login flow)
+      try {
+        const profileResult = await getProfile(undefined).unwrap()
+        if (profileResult?.data) {
+          dispatch(setProfileData({
+            profileData: profileResult.data,
+            token: token ?? '',
+          }))
+        }
+      } catch {
+        // profile refresh failed silently — picture still uploaded
       }
-      reader.readAsDataURL(file)
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to upload profile picture'
+      eSnack(msg)
     }
   }
 
@@ -131,12 +157,15 @@ const ProfileForm = () => {
                 onChange={handleFileUpload}
                 className="hidden"
                 id="profile-picture-upload"
+                disabled={isUploading}
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('profile-picture-upload')?.click()}
                 className="px-4 py-2"
+                disabled={isUploading}
+                loader={isUploading}
               >
                 <div className="flex items-center gap-2">
                   <svg
@@ -152,7 +181,7 @@ const ProfileForm = () => {
                       d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
                   </svg>
-                  <span>Upload New Picture</span>
+                  <span>{isUploading ? 'Uploading...' : 'Upload New Picture'}</span>
                 </div>
               </Button>
             </label>
