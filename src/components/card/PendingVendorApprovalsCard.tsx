@@ -23,7 +23,7 @@ function PendingVendorApprovalsCard({
   pendingCount,
   seeAllHref = '#',
   items,
-  onReview,
+  onReview: _onReview,
   loading = false,
 }: PendingVendorApprovalsCardProps) {
   if (loading) {
