@@ -120,8 +120,16 @@ const Header = ({ onMenuClick }: HeaderProps) => {
               onClick={() => setShowProfileDropdown(!showProfileDropdown)}
               className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-ManropeBold text-sm">
-                {profileData?.firstname?.[0]?.toUpperCase() || 'U'}
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-ManropeBold text-sm shrink-0">
+                {profileData?.profilePicture ? (
+                  <img
+                    src={`https://api.souvenir.live${profileData.profilePicture}`}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  profileData?.firstname?.[0]?.toUpperCase() || 'U'
+                )}
               </div>
               <div className="flex flex-col items-start">
                 <span className="text-sm font-ManropeBold text-gray-800">

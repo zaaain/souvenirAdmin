@@ -265,7 +265,6 @@ function OrderDetail() {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-ManropeBold text-gray-800">Products</th>
-                    <th className="text-left py-3 px-4 text-sm font-ManropeBold text-gray-800">SKU</th>
                     <th className="text-left py-3 px-4 text-sm font-ManropeBold text-gray-800">Quantity</th>
                     <th className="text-left py-3 px-4 text-sm font-ManropeBold text-gray-800">Price</th>
                     <th className="text-right py-3 px-4 text-sm font-ManropeBold text-gray-800">Total</th>
@@ -277,7 +276,6 @@ function OrderDetail() {
                       <td className="py-3 px-4">
                         <p className="text-sm font-Manrope text-gray-800">{item.productName as string}</p>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">{item.sku as string}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{item.quantity as number}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{item.price as string}</td>
                       <td className="py-3 px-4 text-sm font-ManropeBold text-gray-800 text-right">
@@ -298,6 +296,10 @@ function OrderDetail() {
                   <div className="flex items-center gap-8">
                     <span className="text-sm text-gray-600">Delivery Fee</span>
                     <span className="text-sm font-ManropeBold text-gray-800 w-24">{orderData.deliveryFee as string}</span>
+                  </div>
+                  <div className="flex items-center gap-8 pt-2 border-t border-gray-200">
+                    <span className="text-sm font-ManropeBold text-gray-800">Total</span>
+                    <span className="text-sm font-ManropeBold text-gray-800 w-24">{orderData.total as string}</span>
                   </div>
                 </div>
               </div>

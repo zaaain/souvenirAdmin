@@ -118,6 +118,12 @@ const ProfileForm = () => {
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
+              ) : profileData?.profilePicture ? (
+                <img
+                  src={`https://api.souvenir.live${profileData.profilePicture}`}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center">
                   <svg

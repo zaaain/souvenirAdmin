@@ -117,6 +117,7 @@ export function mapOrderToUi(apiOrder: VendorOrderDetail | null | undefined): Re
     orderItems,
     subtotal: apiOrder.totalAmount != null ? formatCurrency(apiOrder.totalAmount) : (typeof (apiOrder as Record<string, unknown>).subtotal === 'number' ? formatCurrency((apiOrder as Record<string, unknown>).subtotal as number) : '—'),
     deliveryFee: apiOrder.shippingCost != null ? formatCurrency(apiOrder.shippingCost) : (typeof (apiOrder as Record<string, unknown>).deliveryFee === 'number' ? formatCurrency((apiOrder as Record<string, unknown>).deliveryFee as number) : '—'),
+    total: formatCurrency((apiOrder.totalAmount ?? 0) + (apiOrder.shippingCost ?? (typeof (apiOrder as Record<string, unknown>).deliveryFee === 'number' ? (apiOrder as Record<string, unknown>).deliveryFee as number : 0))),
     trackingSteps: steps,
     invoice: apiOrder.invoice ?? { fileName: 'Invoice', size: '—', generatedDate: '—' },
     deliveryProof: apiOrder.deliveryProof ?? { fileName: 'Delivery Proof', status: '—' },

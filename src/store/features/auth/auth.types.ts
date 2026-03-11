@@ -14,6 +14,7 @@ export interface ProfileData {
   isActive: boolean
   role: string
   updatedAt: string
+  profilePicture?: string
   __v?: number
 }
 

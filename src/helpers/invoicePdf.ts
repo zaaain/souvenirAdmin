@@ -43,6 +43,7 @@ export function downloadInvoicePdf(
   const status = String(orderData.status ?? '')
   const subtotal = String(orderData.subtotal ?? '')
   const deliveryFee = String(orderData.deliveryFee ?? '')
+  const total = String(orderData.total ?? orderData.subtotal ?? '')
   const orderItems = (orderData.orderItems ?? []) as Array<Record<string, unknown>>
 
   if (logoDataUrl) {
@@ -127,7 +128,7 @@ export function downloadInvoicePdf(
   y += 7
   doc.setFontSize(11)
   doc.text('Total:', tableX + colW[0] + colW[1], y)
-  doc.text(subtotal, tableX + colW[0] + colW[1] + colW[2] + 2, y)
+  doc.text(total, tableX + colW[0] + colW[1] + colW[2] + 2, y)
   y += 15
 
   doc.setFont('helvetica', 'normal')
